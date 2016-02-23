@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+	This file is part of SpeedTest.
+
+    SpeedTest is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SpeedTest is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with SpeedTest.  If not, see <http://www.gnu.org/licenses/>.
+ 
+ -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    >
+
+
+
+
+    <RelativeLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent">
+
+
+
+
+        <ScrollView
+            android:layout_alignParentTop="true"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/horizontalScrollView"
+            android:layout_gravity="center_horizontal|bottom"
+            >
+
+            <LinearLayout
+                android:id="@+id/resultContainer"
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center|bottom">
+                <TextView
+                    android:id="@+id/resultviewer"
+                    android:layout_gravity="center"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="40dp"
+                    android:text=""
+                    android:textColor="@color/backgroundPrimary"/>
+
+            </LinearLayout>
+        </ScrollView>
+
+        <ScrollView
+            android:scrollbars="none"
+            android:layout_alignParentTop="true"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/topScrollView"
+            android:layout_gravity="center_horizontal|bottom"
+            >
+
+            <LinearLayout
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:orientation="vertical">
+
+                <RelativeLayout
+                    android:id="@+id/topContainerA"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/gradient_black_to_clear"
+                    >
+
+
+
+                    <Button
+                        android:gravity="center"
+                        android:layout_centerInParent="true"
+                        android:layout_width="200dp"
+                        android:layout_height="200dp"
+                        android:textSize="30dp"
+
+                        android:maxLines="1"
+                        android:id="@+id/btnStart"
+                        android:text="@string/start_button"
+                        android:textColor="@color/PingTextColor"
+                        android:background="@drawable/circular_button_background"
+                        />
+                </RelativeLayout>
+
+
+            </LinearLayout>
+
+
+
+        </ScrollView>
+
+        <RelativeLayout
+            android:layout_alignParentTop="true"
+            android:layout_width="match_parent"
+            android:layout_height="100px"
+            android:id="@+id/progress_bar_container">
+
+            <TextView
+                android:textSize="25sp"
+                android:gravity="center"
+                android:textColor="@color/fireLit"
+                android:background="@drawable/title_bar_border"
+                android:text=""
+                android:layout_alignParentTop="true"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent" />
+
+            <ProgressBar
+                android:layout_alignParentTop="true"
+                android:id="@+id/progressBar1"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:progressDrawable="@drawable/customprogressbar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:max = "10000"/>
+            <TextView
+                android:textSize="25sp"
+                android:id="@+id/mainlabel"
+                android:gravity="center"
+                android:textColor="@color/fireLit"
+                android:text="@string/app_name"
+                android:layout_alignParentTop="true"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent" />
+        </RelativeLayout>
+
+
+
+        <HorizontalScrollView
+            android:scrollbars="none"
+            android:id ="@+id/btn_settings_scroller"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/progress_bar_container"
+            android:layout_alignLeft="@id/progress_bar_container"
+            >
+        <LinearLayout
+            android:id ="@+id/btn_settings_container"
+            android:layout_below="@id/progress_bar_container"
+            android:layout_alignLeft="@id/progress_bar_container"
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            >
+            <Button
+                android:id ="@+id/btn_settings"
+                android:background="@drawable/settings_popup_background"
+                android:layout_width="100dp"
+                android:layout_height="50dp"
+                android:text="Settings"
+                android:layout_gravity="left|center_vertical"
+                android:textColor="@color/PingTextColor"
+                />
+
+
+
+        </LinearLayout>
+        </HorizontalScrollView>
+
+        <RelativeLayout
+            android:onClick="dissMissAllPopups"
+            android:clickable="true"
+            android:visibility="gone"
+            android:id="@+id/grey_out"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/greyOver">
+
+        </RelativeLayout>
+
+
+
+    </RelativeLayout>
+
+
+
+
+
+
+</LinearLayout>
