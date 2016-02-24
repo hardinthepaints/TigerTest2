@@ -12,6 +12,10 @@
             android:name=".LocalDB.DatabaseManagerService"
             android:enabled="true"
             android:exported="false"></service>
+        <service
+            android:name=".DataGatherService"
+            android:enabled="true"
+            android:exported="false"></service>
 
         <activity android:name=".Launcher.MainActivity"
             android:label="@string/app_name"

@@ -36,6 +36,8 @@ public class FeedReaderDbHelper extends SQLiteOpenHelper {
         public static final String ACCESSPT_STRING = "wirelessAccessPointMAC";
         public static final String LOCATIONPROV_STRING = "locationProvider";
         public static final String ID_STRING = "uuid";
+    public static final String GEOCODE_STRING = "geocode";
+
 
     static final String TABLE_NAME = "appresults";
 
@@ -43,23 +45,6 @@ public class FeedReaderDbHelper extends SQLiteOpenHelper {
     static String TYPE_REAL = "REAL";
     static String TYPE_INT = "INTEGER";
 
-    String[] columnNamesTypes = new String[]{
-        NETWORK_STRING, TYPE_TEXT,
-        LAT_STRING, TYPE_REAL,
-        LONG_STRING, TYPE_REAL,
-        DOWNLOAD_STRING, TYPE_TEXT,
-        ALT_STRING,TYPE_REAL,
-        TIMESTAMP_STRING, TYPE_TEXT,
-        TIMESTAMPFMT_STRING,TYPE_TEXT,
-        CONNTIME_STRING,TYPE_REAL,
-        CONNTIMEUNIT_STRING, TYPE_TEXT,
-        BYTES_STRING, TYPE_INT,
-        SPEED_STRING,TYPE_REAL,
-        MAC_STRING,TYPE_TEXT,
-        ACCESSPT_STRING,TYPE_TEXT,
-        LOCATIONPROV_STRING,TYPE_TEXT,
-        ID_STRING, TYPE_TEXT + " PRIMARY KEY"
-        };
 
     public static HashMap<String,String> types = new HashMap<String, String>(){
         {
@@ -77,6 +62,7 @@ public class FeedReaderDbHelper extends SQLiteOpenHelper {
             put(MAC_STRING, TYPE_TEXT);
             put(ACCESSPT_STRING, TYPE_TEXT);
             put(LOCATIONPROV_STRING, TYPE_TEXT);
+            put(GEOCODE_STRING, TYPE_TEXT);
             put(ID_STRING, TYPE_TEXT + " PRIMARY KEY");
 
         }};

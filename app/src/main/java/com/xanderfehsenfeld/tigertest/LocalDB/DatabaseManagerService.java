@@ -7,14 +7,12 @@ package com.xanderfehsenfeld.tigertest.LocalDB;
 
 import android.app.Service;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.os.Messenger;
 import android.os.ResultReceiver;
-import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.xanderfehsenfeld.tigertest.Launcher.SpeedTestLauncher;
@@ -22,21 +20,27 @@ import com.xanderfehsenfeld.tigertest.Launcher.Tests;
 import com.xanderfehsenfeld.tigertest.ServerRequestor;
 
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.util.HashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class DatabaseManagerService extends Service
 {
     private static final String TAG = "DatabaseManagerService";
     private static final String LOCATION_SERVICES_TAG = "DatabaseManagerService";
-    protected final Messenger mServerMessenger = new Messenger(new IncomingHandler(this));
+
+
+    //protected final Messenger mServerMessenger = new Messenger(new IncomingHandler(this));
+    protected Messenger mServerMessenger;
+
 
     public static final int MSG_RECOGNIZER_START_LISTENING = 1;
     public static final int MSG_RECORD_ADDED = 2;
 
 
     /* send data back to MainActivity */
-    ResultReceiver resultReceiver;
+    public ResultReceiver resultReceiver;
 
     /* TODO remove after testing */
     ResultReceiver mTestResultReceiver;
@@ -45,7 +49,7 @@ public class DatabaseManagerService extends Service
     CountDownTimer mTimer;
 
     /* db with wrapper class */
-    MyDbWrapper db;
+    protected MyDbWrapper db;
     private boolean mTransferInProgress = false;
 
 
@@ -72,77 +76,69 @@ public class DatabaseManagerService extends Service
 
     }
 
-    /* IncomingHandler */
-    protected class IncomingHandler extends Handler
-    {
-        private WeakReference<DatabaseManagerService> mtarget;
+    /* IncomingHandler now declared in DataGatherService.class */
 
-        IncomingHandler(DatabaseManagerService target)
-        {
-            mtarget = new WeakReference<DatabaseManagerService>(target);
-            Log.d(TAG, "IncomingHandler");
-        }
-
-
-        @Override
-        public void handleMessage(Message msg)
-        {
-            final DatabaseManagerService target = mtarget.get();
-
-            switch (msg.what)
-            {
-                case MSG_RECOGNIZER_START_LISTENING:
-
-                    Log.d(TAG, "message start listening");
-                    break;
-
-                case MSG_RECORD_ADDED:
-
-                    Log.d(TAG, "message record added"); //$NON-NLS-1$
-
-                    if( !mTransferInProgress ){
-                        transferRecords();
-                    }
-                    break;
-            }
-        }
-    }
+//    /* IncomingHandler */
+//    protected class IncomingHandler extends Handler
+//    {
+//        private WeakReference<DatabaseManagerService> mtarget;
+//
+//        IncomingHandler(DatabaseManagerService target)
+//        {
+//            mtarget = new WeakReference<DatabaseManagerService>(target);
+//            Log.d(TAG, "IncomingHandler");
+//        }
+//
+//
+//        @Override
+//        public void handleMessage(Message msg)
+//        {
+//            final DatabaseManagerService target = mtarget.get();
+//
+//            switch (msg.what)
+//            {
+//                case MSG_RECOGNIZER_START_LISTENING:
+//
+//                    Log.d(TAG, "message start listening");
+//                    break;
+//
+//                case MSG_RECORD_ADDED:
+//
+//                    Log.d(TAG, "message record added"); //$NON-NLS-1$
+//
+//                    if( !mTransferInProgress ){
+//                        transferRecords();
+//                    }
+//                    break;
+//            }
+//        }
+//    }
 
     /** transferRecords
      *      transfer all the records to the server
      *      the server requester deletes the records upon response from server so the db should eventually dwindle to empty
      */
-    private void transferRecords(){
+    public void transferRecords(){
         mTransferInProgress = true;
-        //db.printDb();
 
 
         if ( db.getRecordCount() > 0 ) {
             for ( String id : db.getIds()) {
                 HashMap<String,String> record = db.retrieveRecord(id);
 
-
-                //HashMap<String, String> record = db.getARecord();
-                if ((record != null)) {
-
-                    String toLog = "";
-                    for (String key : record.keySet()) {
-                        toLog += "|" + key + ":" + record.get(key);
-                    }
-                    Log.d(TAG, toLog);
+                    AsyncTask task = new PostToServerTask().execute(record);
                     try {
-                        sendResults(record, interpretResponse(ServerRequestor.post(SpeedTestLauncher.SERVER_URL, record, db)));
-                    } catch (IOException e) {
+                        task.get(30, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
                         e.printStackTrace();
-                        Log.e(TAG, e.getMessage());
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (TimeoutException e) {
+                        e.printStackTrace();
                     }
-                } else {
-                    Log.e(TAG, "Record from getArecord == null");
-                }
+
             }
-//        while( db.getRecordCount() >0 ) {
-//
-//        }
+
         }
         mTransferInProgress = false;
 
@@ -172,7 +168,6 @@ public class DatabaseManagerService extends Service
         resultReceiver.send(200, bundle);
     }
 
-    @Nullable
     @Override
     public IBinder onBind(Intent intent)
     {
@@ -211,8 +206,41 @@ public class DatabaseManagerService extends Service
         bundle.putBoolean("wasDeleted", wasDeleted);
         resultReceiver.send(2, bundle);
 
-        mTestResultReceiver.send( 2, bundle );
+        mTestResultReceiver.send(2, bundle);
     }
+
+    /** PostToServerTask
+     *      params <
+     *          HashMap<String,String> - The record to post (only one)
+     *          Void, - the update type (no update)
+     *          String - the result string
+     *          >
+     *      When it executes, it deletes the records on the local db if possible and sends the results
+     *
+     */
+    private class PostToServerTask extends AsyncTask<HashMap<String, String>, Void, String> {
+
+        public static final String TAG_POSTER = "PostToServerTask";
+
+        @Override
+        protected String doInBackground(HashMap<String,String> ... records) {
+            String result = "no result";
+            try {
+                result = ServerRequestor.post(SpeedTestLauncher.SERVER_URL, records[0]);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return result;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+
+            sendResults(db.retrieveRecord(result), interpretResponse(result));
+
+        }
+    }
+
 
 
 

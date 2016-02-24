@@ -3,6 +3,7 @@ package com.xanderfehsenfeld.tigertest.Launcher;
 import android.os.Message;
 import android.util.Log;
 
+import com.xanderfehsenfeld.tigertest.DataGatherService;
 import com.xanderfehsenfeld.tigertest.Permissions;
 
 import java.io.IOException;
@@ -20,7 +21,7 @@ import java.net.URLConnection;
  *
  *
  */
-class SpeedTester implements Runnable {
+public class SpeedTester implements Runnable {
 
     private static final double BYTE_TO_KILOBIT = 0.0078125;
     private static final double KILOBIT_TO_MEGABIT = 0.0009765625;
@@ -30,11 +31,13 @@ class SpeedTester implements Runnable {
     /* connection timeout in ms */
     public int connectTimeout;
 
-    private SpeedTestLauncher speedTestLauncher;
+    //private SpeedTestLauncher speedTestLauncher;
+    private DataGatherService dataGatherService;
 
-    public SpeedTester(SpeedTestLauncher speedTestLauncher) {
-        this.speedTestLauncher = speedTestLauncher;
-        connectTimeout = speedTestLauncher.timeLimit * 1000;
+    public SpeedTester(DataGatherService dataGatherService ) {
+        //this.speedTestLauncher = speedTestLauncher;
+        this.dataGatherService = dataGatherService;
+        connectTimeout = dataGatherService.CONNECT_TIMEOUT;
     }
 
     @Override
@@ -46,7 +49,7 @@ class SpeedTester implements Runnable {
             long startCon = System.currentTimeMillis();
 
             /* the file to be downloaded */
-            URL url = new URL(speedTestLauncher.DOWNLOAD_FILE_URL);
+            URL url = new URL(dataGatherService.DOWNLOAD_FILE_URL);
             URLConnection con = url.openConnection();
 
             /* TODO remove after testing
@@ -65,9 +68,10 @@ class SpeedTester implements Runnable {
 
             SpeedTestLauncher.EXPECTED_SIZE_IN_BYTES = con.getContentLength();
 
-            Message msgUpdateConnection = Message.obtain(speedTestLauncher.mHandler, speedTestLauncher.MSG_UPDATE_CONNECTION_TIME);
+            /* don't need to send this to dataGatherService, bc this update only concerns UI */
+            Message msgUpdateConnection = Message.obtain(dataGatherService.mHandler, SpeedTestLauncher.MSG_UPDATE_CONNECTION_TIME);
             msgUpdateConnection.arg1 = (int) connectionLatency;
-            speedTestLauncher.mHandler.sendMessage(msgUpdateConnection);
+            dataGatherService.mHandler.sendMessage(msgUpdateConnection);
 
             long start = System.currentTimeMillis();
             int currentByte = 0;
@@ -96,12 +100,16 @@ class SpeedTester implements Runnable {
                     Log.d(TAG_WORKER, "thread interupted. returning.");
                     /* send message complete even though its not */
                     Long downloadTime = (System.currentTimeMillis() - start);
-                    Message msg = Message.obtain(speedTestLauncher.mHandler, speedTestLauncher.MSG_COMPLETE_STATUS, calculate(downloadTime, bytesIn));
+
+                    Message msg = Message.obtain(dataGatherService.mHandler, SpeedTestLauncher.MSG_COMPLETE_STATUS, calculate(downloadTime, bytesIn));
+                    //Message dataMsg = Message.obtain(dataGatherService.mHandler, speedTestLauncher.MSG_COMPLETE_STATUS, calculate(downloadTime, bytesIn));
+
                     msg.arg1 = bytesIn;
 
                     /* communicate this is not complete */
                     msg.arg2 = 0;
-                    speedTestLauncher.mHandler.sendMessage(msg);
+
+                    dataGatherService.mHandler.sendMessage(msg);
 
                     return;
                 }
@@ -111,10 +119,10 @@ class SpeedTester implements Runnable {
                 bytesInThreshold += currentByte;
                 if (updateDelta >= SpeedTestLauncher.UPDATE_THRESHOLD) {
                     int progress = (int) ((bytesIn / (double) SpeedTestLauncher.EXPECTED_SIZE_IN_BYTES) * 100);
-                    Message msg = Message.obtain(speedTestLauncher.mHandler, speedTestLauncher.MSG_UPDATE_STATUS, calculate(updateDelta, bytesInThreshold));
+                    Message msg = Message.obtain(dataGatherService.mHandler, SpeedTestLauncher.MSG_UPDATE_STATUS, calculate(updateDelta, bytesInThreshold));
                     msg.arg1 = progress;
                     msg.arg2 = bytesIn;
-                    speedTestLauncher.mHandler.sendMessage(msg);
+                    dataGatherService.mHandler.sendMessage(msg);
                     //Reset
                     updateStart = System.currentTimeMillis();
                     bytesInThreshold = 0;
@@ -129,7 +137,7 @@ class SpeedTester implements Runnable {
             long downloadTime = (System.currentTimeMillis() - start);
 
             /* cancel countdown before sending results, because the test is considered finished */
-            speedTestLauncher.mCountDownTimer.cancel();
+            dataGatherService.mCountDownTimer.cancel();
 
 
             //Prevent ArithmeticException
@@ -137,10 +145,12 @@ class SpeedTester implements Runnable {
                 downloadTime = 1;
             }
 
-            Message msg = Message.obtain(speedTestLauncher.mHandler, speedTestLauncher.MSG_COMPLETE_STATUS, calculate(downloadTime, bytesIn));
+            Message msg = Message.obtain(dataGatherService.mHandler, SpeedTestLauncher.MSG_COMPLETE_STATUS, calculate(downloadTime, bytesIn));
+            //Message dataMsg = Message.obtain(speedTestLauncher.mHandler, speedTestLauncher.MSG_COMPLETE_STATUS, calculate(downloadTime, bytesIn));
             msg.arg2 = 1;
             msg.arg1 = bytesIn;
-            speedTestLauncher.mHandler.sendMessage(msg);
+            //speedTestLauncher.mHandler.sendMessage(msg);
+            dataGatherService.mHandler.sendMessage(msg);
         } catch (MalformedURLException e) {
 
             Log.e(TAG_WORKER, "malformed url exception: " + e.getMessage());
@@ -148,14 +158,17 @@ class SpeedTester implements Runnable {
         } catch  ( java.net.SocketTimeoutException e ){
             Log.e(TAG_WORKER, "java.net.SocketTimeoutException: " + e.getMessage());
 
-            /* send message complete even though its not */
+            /* send message complete even though its not  complete
+            * */
             //Long downloadTime = (System.currentTimeMillis() - start);
-            Message msg = Message.obtain(speedTestLauncher.mHandler, speedTestLauncher.MSG_COMPLETE_STATUS, -1);
+            Message msg = Message.obtain(dataGatherService.mHandler, SpeedTestLauncher.MSG_COMPLETE_STATUS, calculate(0, 0));
+
             msg.arg1 = -1;
 
             /* communicate this test is not complete */
             msg.arg2 = -1;
-            speedTestLauncher.mHandler.sendMessage(msg);
+
+            dataGatherService.mHandler.sendMessage(msg);
 
         }  catch (IOException e) {
             Log.e(TAG_WORKER, "io exception: " + e.getMessage());
@@ -172,7 +185,8 @@ class SpeedTester implements Runnable {
         }
 
         /* cencel the countdown timer */
-        speedTestLauncher.mCountDownTimer.cancel();
+        dataGatherService.mCountDownTimer.cancel();
+
     }
 
     /**
@@ -212,4 +226,10 @@ class SpeedTester implements Runnable {
         public double megabits=0;
         public double downspeed=0;
     }
+
+//    public static Bundle infoToBundle(SpeedInfo info){
+//        Bundle b = new Bundle();
+//        b.putDouble();
+//
+//    }
 }

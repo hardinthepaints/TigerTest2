@@ -25,9 +25,8 @@ import android.content.ServiceConnection;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.location.Geocoder;
 import android.location.Location;
-import android.media.MediaPlayer;
-import android.media.SoundPool;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
@@ -53,16 +52,19 @@ import android.widget.HorizontalScrollView;
 import android.widget.PopupWindow;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.xanderfehsenfeld.tigertest.DataGatherService;
 import com.xanderfehsenfeld.tigertest.GPS.GPSTracker;
-import com.xanderfehsenfeld.tigertest.LocalDB.DatabaseManagerService;
 import com.xanderfehsenfeld.tigertest.LocalDB.FeedReaderDbHelper;
 import com.xanderfehsenfeld.tigertest.LocalDB.MyDbWrapper;
 import com.xanderfehsenfeld.tigertest.MySoundPlayer;
 import com.xanderfehsenfeld.tigertest.R;
 
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -79,6 +81,9 @@ import java.util.UUID;
  */
 public class SpeedTestLauncher extends Activity {
 
+    public static final int MSG_PRELIM_STATUS = -2;
+    //    public static final String FUNCTN_SHOW_POPUP = "showPopup";
+//    public static final String SET_PROGRESS_BAR = "setProgressBar";
     /* contants for the method 'playsound' */
     public static int SOUND_TEST_STARTED = 0;
     public static int SOUND_TEST_COMPLETE = 1;
@@ -87,10 +92,14 @@ public class SpeedTestLauncher extends Activity {
     public static int SOUND_POPUP_HIDE = 4;
     public static int SOUND_CLICK_DOWN = 5;
 
+    public static final Class SERVICE_CLASS = DataGatherService.class;
+
+
 
     /* constants for method 'changeUI' */
     public static final int UI_MODE_TESTING = 0;
     public static final int UI_MODE_NOT_TESTING = 1;
+    public static int MSG_CALL_FUNCTION = -1;
 
 
     //protected HashMap<String, Integer> textAndColor;
@@ -111,10 +120,10 @@ public class SpeedTestLauncher extends Activity {
 
 	protected static int EXPECTED_SIZE_IN_BYTES = 5 * 1000000;//5MB 1024*1024
 
-	private static final String TIMESTAMP_FORMAT = "dd/MM/yy HH:mm:ss";
+	public static final String TIMESTAMP_FORMAT = "dd/MM/yy HH:mm:ss";
 	public static String SERVER_URL;
 
-	protected String DOWNLOAD_FILE_URL = "http://www.smdc.army.mil/smdcphoto_gallery/Missiles/IFT_13B_Launch/IFT13b-3-02.jpg";
+	protected static String DOWNLOAD_FILE_URL = "http://www.smdc.army.mil/smdcphoto_gallery/Missiles/IFT_13B_Launch/IFT13b-3-02.jpg";
 
 
 	//private static final double EDGE_THRESHOLD = 176.0;
@@ -140,9 +149,9 @@ public class SpeedTestLauncher extends Activity {
 	/* HashMap to store resultant data */
 	HashMap<String, String> data;
 
-	protected final int MSG_UPDATE_STATUS=0;
-	protected final int MSG_UPDATE_CONNECTION_TIME=1;
-	protected final int MSG_COMPLETE_STATUS=2;
+	protected static final int MSG_UPDATE_STATUS=0;
+	protected static final int MSG_UPDATE_CONNECTION_TIME=1;
+	protected static final int MSG_COMPLETE_STATUS=2;
 	protected final static int UPDATE_THRESHOLD=200;
 
 	/* location */
@@ -156,6 +165,8 @@ public class SpeedTestLauncher extends Activity {
 
     /* progress bar */
     ProgressBar mCustomProgressBar;
+
+    protected ScrollView mTopScroller;
 
 
 
@@ -174,7 +185,8 @@ public class SpeedTestLauncher extends Activity {
     protected Messenger mServiceMessenger;
 
     /* time limit of test in seconds */
-    public int timeLimit = 5;
+    public static int timeLimit = 5;
+
 
     /* A service connection to connect this Activity with the speech recognition service */
     final ServiceConnection mServiceConnection = new ServiceConnection()
@@ -214,6 +226,7 @@ public class SpeedTestLauncher extends Activity {
     MyResultReceiver resultReceiver;
 
     GPSTracker mGPSTRacker;
+    Geocoder mGeocoder;
 
     /* local data base */
     MyDbWrapper db;
@@ -297,6 +310,7 @@ public class SpeedTestLauncher extends Activity {
         //changeUI(0);
 
         mGPSTRacker = new GPSTracker(this);
+        mGeocoder = new Geocoder(this);
 
 
         /* get a database helper */
@@ -308,6 +322,10 @@ public class SpeedTestLauncher extends Activity {
 
         mySoundPlayer = new MySoundPlayer(this);
 
+        /* start the service, which will be stopped in onDestroy */
+        startMyService();
+
+
 
     }
 
@@ -318,7 +336,7 @@ public class SpeedTestLauncher extends Activity {
     public void dissMissAllPopups( View v ){
         System.out.println("dissMissAllPopups");
         if (pwindo != null )  pwindo.dismiss();
-        if (settingsPwindo != null ) pwindo.dismiss();
+        if (settingsPwindo != null ) settingsPwindo.dismiss();
     }
 
 
@@ -446,6 +464,15 @@ public class SpeedTestLauncher extends Activity {
         data.put(FeedReaderDbHelper.LONG_STRING, mLongitude + "");
         data.put(FeedReaderDbHelper.ALT_STRING, mAltitude + "");
 
+        /* attempt to get geo code */
+        try {
+            String address = mGeocoder.getFromLocation(mLatitude, mLongitude, 1).get(0).getAddressLine(0);
+            data.put(FeedReaderDbHelper.GEOCODE_STRING, address);
+        } catch (IOException e) {
+            //e.printStackTrace();
+            Log.e( TAG, e.getMessage() );
+        }
+
 		/* get the time */
         data.put(FeedReaderDbHelper.TIMESTAMP_STRING, getTimeStamp());
         data.put(FeedReaderDbHelper.TIMESTAMPFMT_STRING, TIMESTAMP_FORMAT);
@@ -525,7 +552,6 @@ public class SpeedTestLauncher extends Activity {
         changeUI(UI_MODE_NOT_TESTING);
         super.onStart();
 
-        startMyService();
         bindMyService();
 
     }
@@ -536,17 +562,23 @@ public class SpeedTestLauncher extends Activity {
 
         super.onStop();
         unbindMyService();
+
+    }
+
+    @Override
+    protected void onDestroy() {
+        Log.d(TAG, "onDestroy");
+        super.onDestroy();
         stopMyService();
-
-
 
     }
 
     /* for binding to the service */
     /* Bind the the speech recog service */
     private void bindMyService(){
-        Intent i = new Intent(this, DatabaseManagerService.class);
+        Intent i = new Intent(this, SERVICE_CLASS);
         i.putExtra("receiver", resultReceiver);
+
 
         /* TODO remove after testing */
         i.putExtra(Tests.TEST_RECEIVER_STRING, tests.myTestResultResultReceiver);
@@ -565,7 +597,7 @@ public class SpeedTestLauncher extends Activity {
     /* stop and unbind with the service */
     private void stopMyService(){
 
-        Intent service = new Intent(SpeedTestLauncher.this, DatabaseManagerService.class);
+        Intent service = new Intent(SpeedTestLauncher.this, SERVICE_CLASS);
         SpeedTestLauncher.this.stopService(service);
     }
 
@@ -573,23 +605,22 @@ public class SpeedTestLauncher extends Activity {
     private void startMyService(){
 
         /* start the service */
-        Intent service = new Intent(SpeedTestLauncher.this, DatabaseManagerService.class);
+        Intent service = new Intent(SpeedTestLauncher.this, SERVICE_CLASS);
         /* send the reciever to the service */
         service.putExtra("receiver", resultReceiver);
         //service.putExtra("score", currentScore);
         mBindFlag = Build.VERSION.SDK_INT < Build.VERSION_CODES.ICE_CREAM_SANDWICH ? 0 : Context.BIND_ABOVE_CLIENT;
         SpeedTestLauncher.this.startService(service);
 
-        /* bind to the service */
-        //bindToService();
 
     }
 
 
     /* update ui with results
     */
-    class MyResultReceiver extends ResultReceiver
+    public class MyResultReceiver extends ResultReceiver
     {
+
         public MyResultReceiver(Handler handler) {
             super(handler);
         }
@@ -597,16 +628,65 @@ public class SpeedTestLauncher extends Activity {
         @Override
         protected void onReceiveResult(int resultCode, Bundle resultData) {
 
-            if(resultCode == 100){
-                //runOnUiThread(new UpdateUI(resultData.getString("start")));
+            if (resultCode == DataGatherService.RECEIVED_FROM_TESTER){
+                /* process data if present */
+                if (resultData.containsKey("data")){
+                    data = (HashMap<String, String>) resultData.getSerializable("data");
+                }
+
+                /* cannot reuse messages */
+                Message msg = new Message();
+                msg.copyFrom ((Message)resultData.getParcelable(String.valueOf(DataGatherService.RECEIVED_FROM_TESTER)));
+                mHandler.sendMessage(msg);
+
+            } else if (resultCode == DataGatherService.PUT_META_DATA){
+                boolean putMetaDataSuccessful;
+                if (putMetaDataSuccessful = resultData.getBoolean("")) {
+                    playSound(SOUND_TEST_STARTED);
+                } else changeUI(UI_MODE_NOT_TESTING);
+                Log.i(TAG, "putMetaData = " + putMetaDataSuccessful);
+
+            } else if (resultCode == DataGatherService.TIMED_OUT){
+                boolean isContinuous;
+                    if (!(isContinuous = resultData.getBoolean(""))) {
+
+                        showPopup("", 1);
+
+                    } else {
+                        Toast t = Toast.makeText(SpeedTestLauncher.this, "Test timed out.", Toast.LENGTH_SHORT);
+                        t.show();
+                    }
+                Log.e(TAG, "timed out. is continous = " + isContinuous);
+
+            } else if (resultCode == DataGatherService.WIFI_CONNECTED_RESULT){
+                boolean wifiConnected;
+                if (!(wifiConnected = resultData.getBoolean(""))) {
+
+                    showPopup( "WIFI NOT CONNECTED", 0 );
+                    playSound(SOUND_ERROR);
+
+                }
+                Log.e(TAG, "wifi connected: " + wifiConnected);
+
+            }else if (resultCode == DataGatherService.IS_ALLOWED_NETWORK){
+
+                boolean allowedNetwork;
+                String network = resultData.getString("network");
+                if (!(allowedNetwork = resultData.getBoolean(""))) {
+                    showPopup( network, 0 );
+                    playSound(SOUND_ERROR);
+
+                }
+                Log.e(TAG, "network " + network + " is allowed: " + allowedNetwork);
+
             }
-            else if(resultCode == 200){
-                //runOnUiThread(new UpdateUI(resultData.getString("end")));
-            }
+
+
             else{
                 boolean wasDeleted = resultData.getBoolean("wasDeleted");
                 String uuid = resultData.getString(FeedReaderDbHelper.ID_STRING);
-                Log.d(TAG, "received result from DatabaseManagerService: " + uuid + ", " + wasDeleted);
+                Log.d(TAG, "received result from " + SERVICE_CLASS.getName() + ": " + uuid + ", " + wasDeleted);
+
             }
         }
     }
@@ -662,7 +742,8 @@ public class SpeedTestLauncher extends Activity {
                     } else if (msg.arg2 == -1 ) {
                         playSound(SOUND_ERROR);
                         showPopup("", 3);
-                        data = null;
+
+
                         break;
                     }
 
@@ -674,12 +755,12 @@ public class SpeedTestLauncher extends Activity {
 				/* store data in hashmap */
 
 				/* download speed and total bytes downloaded */
-                    data.put(FeedReaderDbHelper.SPEED_STRING, info2.megabits + "");
-                    data.put(FeedReaderDbHelper.BYTES_STRING, msg.arg1 + "");
+                    //data.put(FeedReaderDbHelper.SPEED_STRING, info2.megabits + "");
+                    //data.put(FeedReaderDbHelper.BYTES_STRING, msg.arg1 + "");
 
 				/* connection time in ms */
-                    data.put(FeedReaderDbHelper.CONNTIME_STRING, mConnectionTime + "");
-                    data.put(FeedReaderDbHelper.CONNTIMEUNIT_STRING, "ms");
+//                    data.put(FeedReaderDbHelper.CONNTIME_STRING, mConnectionTime + "");
+//                    data.put(FeedReaderDbHelper.CONNTIMEUNIT_STRING, "ms");
 
 
 				/* prepare data for user */
@@ -687,25 +768,28 @@ public class SpeedTestLauncher extends Activity {
 
 				/* if raining animation is already started, then the above added items will rain */
                     if (!mRaining) startRainAnimation();
+                    //mTopScroller.fullScroll(View.FOCUS_DOWN);
+                    mTopScroller.fling(3000);
+
 
 
                     //mResultViewer.setText(result);
 
                 /* store data in db */
-                    db.saveRecord(data);
-                    String uuid = data.get(FeedReaderDbHelper.ID_STRING);
+                    //db.saveRecord(data);
+                    //String uuid = data.get(FeedReaderDbHelper.ID_STRING);
                     //removeRecord(uuid);
 
                 /* tell the data base service a record was added */
-                    Message message = Message.obtain(null, DatabaseManagerService.MSG_RECORD_ADDED);
-                    try {
-                        mServiceMessenger.send(message);
-                    } catch (RemoteException e) {
-                        e.printStackTrace();
-                    }
+//                    Message message = Message.obtain(null, DatabaseManagerService.MSG_RECORD_ADDED);
+//                    try {
+//                        mServiceMessenger.send(message);
+//                    } catch (RemoteException e) {
+//                        e.printStackTrace();
+//                    }
 
 				/* post the data to the server */
-                    String response = "";
+                    //String response = "";
 //				try {
 //                    Toast toast = Toast.makeText( getApplicationContext(), "Posting to server...", Toast.LENGTH_LONG);
 //                    toast.show();
@@ -719,7 +803,7 @@ public class SpeedTestLauncher extends Activity {
 //                    toast.show();
 //                }
 
-                /* on continuous mode, start the test again */
+                    /* on continuous mode, start the test again */
                     if (isContinuous) mBtnStart.performClick();
 
 
@@ -734,7 +818,7 @@ public class SpeedTestLauncher extends Activity {
     /**
      * Our Slave worker that does actually all the work
      */
-    protected final SpeedTester mSpeedTester = new SpeedTester(this);
+    //protected final SpeedTester mSpeedTester = new SpeedTester(this);
 
 
     /** changeUI

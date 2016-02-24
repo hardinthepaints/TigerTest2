@@ -8,11 +8,11 @@ import android.util.TypedValue;
 import android.view.View;
 import android.widget.Button;
 
-import com.xanderfehsenfeld.tigertest.R;
-
 /**
  * Created by Xander on 2/19/16.
  */
+
+/* TODO remove when done developing */
 public class ViewCreator {
 
     /** getRoundButton

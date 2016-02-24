@@ -2,8 +2,6 @@ package com.xanderfehsenfeld.tigertest;
 
 import android.util.Log;
 
-import com.xanderfehsenfeld.tigertest.LocalDB.MyDbWrapper;
-
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -93,7 +91,7 @@ public class ServerRequestor {
 //
 //    }
 
-    public static String post(String url, HashMap<String, String> data, MyDbWrapper db) throws IOException {
+    public static String post(String url, HashMap<String, String> data) throws IOException {
 
 
         // init client
@@ -168,6 +166,7 @@ public class ServerRequestor {
         }
         return ERROR_RESPONSE_READ;
     }
+
 
 
 

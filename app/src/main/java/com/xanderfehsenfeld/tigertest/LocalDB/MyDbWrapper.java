@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -25,7 +26,37 @@ public class MyDbWrapper {
 
         /* create the table */
         //db.execSQL(FeedReaderDbHelper.SQL_DELETE_ENTRIES);
+        checkIfColumnsChanged();
+
         createTable();
+    }
+
+    /** checkIfColumnsChanged
+     *      perform a check checking the columns in this database against
+     */
+    private void checkIfColumnsChanged(){
+        //String[] columnNames = ;
+        ArrayList<String> columnNamesAL = new ArrayList<String>(Arrays.asList(getColumnNames()));
+
+        boolean fault = false;
+        String toLog = "Missing columns: ";
+        for (String name: FeedReaderDbHelper.types.keySet()){
+            if (!columnNamesAL.contains(name)){
+                fault = true;
+                toLog += name + ", ";
+            }
+        }
+        if (!fault) return;
+
+        /* refresh table */
+        dropTable();
+        createTable();
+        Log.e(DB_TAG, toLog);
+    }
+
+    public String[] getColumnNames(){
+        Cursor mAll = db.rawQuery("select * from " + FeedReaderDbHelper.TABLE_NAME, null);
+        return mAll.getColumnNames();
     }
 
     public void dropTable(){

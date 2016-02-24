@@ -3,7 +3,8 @@ package com.xanderfehsenfeld.tigertest.Launcher;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.CountDownTimer;
+import android.os.Message;
+import android.os.RemoteException;
 import android.os.Vibrator;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -28,6 +29,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.xanderfehsenfeld.tigertest.DataGatherService;
 import com.xanderfehsenfeld.tigertest.Permissions;
 import com.xanderfehsenfeld.tigertest.R;
 
@@ -40,6 +42,10 @@ import java.util.LinkedList;
 public class MainActivity extends SpeedTestLauncher {
 
 
+    /* connection timeout of speed tester */
+    private static int CONNECT_TIMEOUT = 0;
+
+
     /* vibrator */
     private Vibrator v;
 
@@ -50,7 +56,7 @@ public class MainActivity extends SpeedTestLauncher {
 
     //private HorizontalScrollView mScroller;
     protected ScrollView mScroller;
-    protected ScrollView mTopScroller;
+
 
     protected RelativeLayout mStartBtnContainer;
 
@@ -119,6 +125,18 @@ public class MainActivity extends SpeedTestLauncher {
     }
 
 
+    private void startTest( int time_limit, int timeout, Object iscontinuous ){
+        /* params: handler, int what, int arg1, int arg2, object obj */
+        Message startTest = Message.obtain(null, DataGatherService.MSG_START_TEST, time_limit, timeout, iscontinuous);
+        try {
+            mServiceMessenger.send(startTest );
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        } catch (java.lang.NullPointerException e){
+            //e.printStackTrace();
+            Log.e(TAG, "" + e.getMessage());
+        }
+    }
 
     /**
      * Setup event handlers and bind variables to values from xml
@@ -130,42 +148,26 @@ public class MainActivity extends SpeedTestLauncher {
             @Override
             public void onClick(final View view) {
 
+                /* fling scroller to top (toward start button */
+                //mTopScroller.fling(-2000);
+                mTopScroller.fullScroll(View.FOCUS_UP);
+
                 playSound(SOUND_CLICK_DOWN);
 
                 changeUI(UI_MODE_TESTING);
 
+                startTest(timeLimit, CONNECT_TIMEOUT, new Boolean(isContinuous));
+
+
+
 				/* get initial metadata and put in a hashmap */
-                if (putMetaData()) {
-
-                    final Thread workerThread = new Thread(mSpeedTester);
-                    workerThread.start();
-
-                    /* make the thread timeout after a certain time */
-                    mCountDownTimer = new CountDownTimer(1000 * timeLimit, 1000) {
-                        @Override
-                        public void onTick(long millisUntilFinished) {
-                        }
-
-                        @Override
-                        public void onFinish() {
-                            workerThread.interrupt();
-                            Log.d(TAG, "countdown finished"); //$NON-NLS-1$
-
-                            if (!isContinuous) {
-                                showPopup("", 1);
-                            } else {
-                                Toast t = Toast.makeText(MainActivity.this, "Test timed out.", Toast.LENGTH_SHORT);
-                                t.show();
-                            }
-                            //playSound(2);
-                        }
-                    };
-                    mCountDownTimer.start();
-
-
-                    playSound(SOUND_TEST_STARTED);
-
-                } else changeUI(UI_MODE_NOT_TESTING);
+//                if (putMetaData()) {
+//
+//                    playSound(SOUND_TEST_STARTED);
+//
+//                }
+//
+//                else changeUI(UI_MODE_NOT_TESTING);
 
 
             }
@@ -229,7 +231,7 @@ public class MainActivity extends SpeedTestLauncher {
 
         final TextView mConnTimeOutTv = (TextView) mSettingsBody.findViewById(R.id.connect_timeout_tv);
         final SeekBar mConnTimeoutSb = (SeekBar) mSettingsBody.findViewById(R.id.connect_timeout_seekbar);
-        mConnTimeoutSb.setProgress((int) Math.sqrt(mSpeedTester.connectTimeout));
+        mConnTimeoutSb.setProgress((int) Math.sqrt(CONNECT_TIMEOUT));
         mConnTimeOutTv.setText("Connection Timeout: " + mConnTimeoutSb.getProgress() * mConnTimeoutSb.getProgress() + "ms");
 
 
@@ -249,7 +251,7 @@ public class MainActivity extends SpeedTestLauncher {
                     } else {
                         mConnTimeOutTv.setText("Connection Timeout: " + progress / 1000 + "sec");
                     }
-                    mSpeedTester.connectTimeout = progress;
+                    CONNECT_TIMEOUT = progress;
                 }
             }
 
@@ -346,7 +348,7 @@ public class MainActivity extends SpeedTestLauncher {
         layout.setOnClickListener(cl);
 
         settingsPwindo.setOutsideTouchable(true);
-        settingsPwindo.setFocusable(true);
+        //settingsPwindo.setFocusable(true);
     }
 
 
@@ -396,7 +398,7 @@ public class MainActivity extends SpeedTestLauncher {
         });
 
         pwindo.setOutsideTouchable(true);
-        pwindo.setFocusable(true);
+        //pwindo.setFocusable(true);
     }
 
     @Override

@@ -88,7 +88,7 @@ public class Tests {
      * @param permission
      * @return
      */
-    protected static boolean checkPermission(String permission, Context c)
+    public static boolean checkPermission(String permission, Context c)
     {
         //String permission = "android.permission.WRITE_EXTERNAL_STORAGE";
         int res = c.checkCallingOrSelfPermission(permission);
