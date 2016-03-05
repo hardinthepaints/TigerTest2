@@ -14,7 +14,7 @@ import java.net.URLConnection;
 
 /**
  * An internet speed test which downloads a file and measures how long it takes,
- * senddin out periodic messages to SpeedTestLauncher
+ * sendin out periodic messages to SpeedTestLauncher
  *
  * Once the tester has started, it either stops when the file is downloaded,
  * or when its thread is interrupted
@@ -27,6 +27,7 @@ public class SpeedTester implements Runnable {
     private static final double KILOBIT_TO_MEGABIT = 0.0009765625;
 
     public static final String TAG_WORKER = "WORKER";
+    protected static int EXPECTED_SIZE_IN_BYTES = 5 * 1000000;//5MB 1024*1024
 
     /* connection timeout in ms */
     public int connectTimeout;
@@ -37,11 +38,14 @@ public class SpeedTester implements Runnable {
     public SpeedTester(DataGatherService dataGatherService ) {
         //this.speedTestLauncher = speedTestLauncher;
         this.dataGatherService = dataGatherService;
-        connectTimeout = dataGatherService.CONNECT_TIMEOUT;
     }
 
     @Override
     public void run() {
+
+        /* get the connection timeout */
+        connectTimeout = dataGatherService.sharePrfs.prefs.getInt(MySharedPrefsWrapper.PREF_CONNECT_TIME_LIMIT, 10000);
+
         InputStream stream = null;
         try {
             int bytesIn = 0;
@@ -66,7 +70,7 @@ public class SpeedTester implements Runnable {
             long connectionLatency = System.currentTimeMillis() - startCon;
             stream = con.getInputStream();
 
-            SpeedTestLauncher.EXPECTED_SIZE_IN_BYTES = con.getContentLength();
+            EXPECTED_SIZE_IN_BYTES = con.getContentLength();
 
             /* don't need to send this to dataGatherService, bc this update only concerns UI */
             Message msgUpdateConnection = Message.obtain(dataGatherService.mHandler, SpeedTestLauncher.MSG_UPDATE_CONNECTION_TIME);
@@ -118,7 +122,7 @@ public class SpeedTester implements Runnable {
                 bytesIn += currentByte;
                 bytesInThreshold += currentByte;
                 if (updateDelta >= SpeedTestLauncher.UPDATE_THRESHOLD) {
-                    int progress = (int) ((bytesIn / (double) SpeedTestLauncher.EXPECTED_SIZE_IN_BYTES) * 100);
+                    int progress = (int) ((bytesIn / (double) EXPECTED_SIZE_IN_BYTES) * 100);
                     Message msg = Message.obtain(dataGatherService.mHandler, SpeedTestLauncher.MSG_UPDATE_STATUS, calculate(updateDelta, bytesInThreshold));
                     msg.arg1 = progress;
                     msg.arg2 = bytesIn;

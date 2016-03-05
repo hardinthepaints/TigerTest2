@@ -8,7 +8,8 @@
     <string name="location_unavailable_message">error: last location unavailable</string>
     <string name="location_connected_message">location services connected!</string>
     <string name="file_downloaded">file_downloaded</string>
-    <string name="server_address">http://cs.coloradocollege.edu/~xander/cgi-bin/notes.cgi</string>
+    <string name="down_speed_unit">megabits per second</string>
+    <string name="conn_time_unit">ms</string>
 
 
 </resources>

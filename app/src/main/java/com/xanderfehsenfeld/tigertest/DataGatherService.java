@@ -7,6 +7,7 @@ package com.xanderfehsenfeld.tigertest;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.location.Geocoder;
 import android.location.Location;
 import android.net.ConnectivityManager;
@@ -22,7 +23,7 @@ import android.os.Messenger;
 import android.util.Log;
 
 import com.xanderfehsenfeld.tigertest.GPS.GPSTracker;
-import com.xanderfehsenfeld.tigertest.Launcher.SpeedTestLauncher;
+import com.xanderfehsenfeld.tigertest.Launcher.MySharedPrefsWrapper;
 import com.xanderfehsenfeld.tigertest.Launcher.SpeedTester;
 import com.xanderfehsenfeld.tigertest.Launcher.Tests;
 import com.xanderfehsenfeld.tigertest.LocalDB.DatabaseManagerService;
@@ -30,9 +31,10 @@ import com.xanderfehsenfeld.tigertest.LocalDB.FeedReaderDbHelper;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.UUID;
 
 public class DataGatherService extends DatabaseManagerService
@@ -46,14 +48,13 @@ public class DataGatherService extends DatabaseManagerService
     public static final int TIMED_OUT = -2;
     public static final int WIFI_CONNECTED_RESULT = -3;
     public static final int IS_ALLOWED_NETWORK = -5;
+    public static final int MSG_SETTINGS_CHANGE = -10;
+    public static final String TIMESTAMP_FORMAT = "yyyy-MM-dd HH:mm:ss";
+    public static final int MSG_SENT_SHARED_PREFS = -11;
     public String DOWNLOAD_FILE_URL = "http://www.smdc.army.mil/smdcphoto_gallery/Missiles/IFT_13B_Launch/IFT13b-3-02.jpg";
-
 
     private static final String TAG = "DataGatherService";
 
-
-
-    public static final int MSG_STOP_TEST = 2;
     public static final int MSG_START_TEST = 1;
 
 
@@ -75,15 +76,15 @@ public class DataGatherService extends DatabaseManagerService
     public CountDownTimer mCountDownTimer;
     private boolean isContinuous = false;
     private int mConnectionTime;
-    public int TIME_LIMIT = 5;
-    public int CONNECT_TIMEOUT = 0;
-    private String SERVER_URL;
-    private boolean activityStopped = false;
+    //public int TIME_LIMIT = 5;
+    //public int CONNECT_TIMEOUT = 0;
+    private boolean activityStopped = true;
 
 
     @Override
     public void onCreate()
     {
+        super.onCreate();
 
 
         Log.d(TAG, "onCreate"); //$NON-NLS-1$
@@ -93,12 +94,9 @@ public class DataGatherService extends DatabaseManagerService
         initDataSources();
 
 
-
-
     }
 
     private void initDataSources(){
-        SERVER_URL = getString(R.string.server_address);
         mGPSTRacker = new GPSTracker(this);
         mGeocoder = new Geocoder(this);
 
@@ -113,12 +111,7 @@ public class DataGatherService extends DatabaseManagerService
     public int onStartCommand(Intent intent, int flags, int startId) {
 
         Log.d(TAG, "onStartCommand"); //$NON-NLS-1$
-
-
-
         return START_STICKY;
-
-
 
     }
     /* IncomingHandler */
@@ -142,11 +135,6 @@ public class DataGatherService extends DatabaseManagerService
             {
                 case MSG_START_TEST:
 
-                    TIME_LIMIT = msg.arg1;
-                    CONNECT_TIMEOUT = msg.arg2;
-                    isContinuous = (boolean) msg.obj;
-
-                    Log.d(TAG, "message start test. time limit: " + TIME_LIMIT);
                     onStartBtnClicked();
 
 
@@ -162,46 +150,32 @@ public class DataGatherService extends DatabaseManagerService
                     }
                     break;
 
+//                case SpeedTestLauncher.MSG_ACTIVITY_STATUS_CHANGE:
+//
+//                    activityStopped = (boolean) msg.obj;
+//
+//                    Log.d(TAG, "MSG_ACTIVITY_STATUS_CHANGE. activityStopped: " + activityStopped);
+//
+//                    break;
+
+                case MSG_SENT_SHARED_PREFS:
+
+                    sharePrfs = (MySharedPrefsWrapper)msg.obj;
+                    Log.d(TAG, "MSG_SENT_SHARED_PREFS. testCount: " + sharePrfs.getTestCount());
+
+                    sharePrfs.prefs.registerOnSharedPreferenceChangeListener(new SharedPreferences.OnSharedPreferenceChangeListener() {
+                        @Override
+                        public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+                            Log.d(TAG, "Shared pref changed. key: " + key );
+                        }
+                    });
+
+                    break;
+
 
             }
         }
     }
-
-
-//    /* IncomingHandler */
-//    protected class IncomingHandler extends Handler
-//    {
-//        private WeakReference<DataGatherService> mtarget;
-//
-//        IncomingHandler(DataGatherService target)
-//        {
-//            mtarget = new WeakReference<DataGatherService>(target);
-//            Log.d(TAG, "IncomingHandler");
-//        }
-//
-//
-//        @Override
-//        public void handleMessage(Message msg)
-//        {
-//            final DataGatherService target = mtarget.get();
-//
-//            switch (msg.what)
-//            {
-//                case MSG_STOP_TEST:
-//
-//                    /* code to deal with stopping the test early */
-//
-//                case MSG_START_TEST:
-//
-//                    /* start the test */
-//
-//
-//            }
-//        }
-//    }
-
-
-
 
     @Override
     public void onDestroy()
@@ -209,17 +183,12 @@ public class DataGatherService extends DatabaseManagerService
         super.onDestroy();
 
 
-//        /* send end code to parent activity */
-//        Bundle bundle = new Bundle();
-//        //bundle.putString("end", "Timer Stopped....");
-//        resultReceiver.send(200, bundle);
     }
 
     @Override
     public boolean onUnbind(Intent intent){
         Log.d(TAG, "onUnbind");  //$NON-NLS-1$
 
-        activityStopped = true;
 
         return false;
     }
@@ -229,32 +198,15 @@ public class DataGatherService extends DatabaseManagerService
     {
         super.onBind(intent);
 
-        activityStopped = false;
 
 
         Log.d(TAG, "onBind");  //$NON-NLS-1$
-//
-//        resultReceiver = intent.getParcelableExtra("receiver");
-//
-//        /* TODO remove after testing */
-//        mTestResultReceiver = intent.getParcelableExtra(Tests.TEST_RECEIVER_STRING);
-//
-//        db = intent.getParcelableExtra("db");
-//        if ( db != null ) {
-//            Log.d(TAG, "recieved db not null");
-//        } else{
-//            Log.e(TAG, "recieved db is null");
-//        }
-//
-//
-//        FeedReaderDbHelper mDbHelper = new FeedReaderDbHelper(getApplicationContext());
-//        db = new MyDbWrapper(mDbHelper.getWritableDatabase());
-//        Log.d(TAG, "opened writeable db:");
-//        db.printDb();
 
 
         /* send an initial amount */
         return mServerMessenger.getBinder();
+
+
     }
 
 
@@ -266,6 +218,8 @@ public class DataGatherService extends DatabaseManagerService
 
 		/* initialize new hashmap to store data */
         data = new HashMap<String, String>();
+
+        data.put(FeedReaderDbHelper.TEST_COUNT, "" + sharePrfs.getTestCount());
 
         // get the MAC address of the router
         WifiManager wifiMgr = (WifiManager) getSystemService(Context.WIFI_SERVICE);
@@ -281,6 +235,10 @@ public class DataGatherService extends DatabaseManagerService
 
             /* get the mac addr */
             MACAddr = getMacAddr();
+
+
+        }else {
+            Log.e(TAG, "lacking permission: " + Tests.PERMISSION_WIFI_STATE);
         }
 
         data.put(FeedReaderDbHelper.MAC_STRING, MACAddr);
@@ -296,11 +254,7 @@ public class DataGatherService extends DatabaseManagerService
 		/* check if wi fi is on */
         NetworkInfo mWiFi = cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
         if (!mWiFi.isConnected()) {
-            //showPopup( "WIFI NOT CONNECTED", 0 );
-            //playSound(SOUND_ERROR);
-            Bundle b = new Bundle();
-            b.putBoolean("", false);
-            resultReceiver.send(WIFI_CONNECTED_RESULT, b);
+            sendMessageToActivity(WIFI_CONNECTED_RESULT, false, null);
             return false;
         }
 
@@ -327,7 +281,7 @@ public class DataGatherService extends DatabaseManagerService
 
 		/* get the time */
         data.put(FeedReaderDbHelper.TIMESTAMP_STRING, getTimeStamp());
-        data.put(FeedReaderDbHelper.TIMESTAMPFMT_STRING, SpeedTestLauncher.TIMESTAMP_FORMAT);
+        data.put(FeedReaderDbHelper.TIMESTAMPFMT_STRING, TIMESTAMP_FORMAT);
 
 
 
@@ -345,10 +299,7 @@ public class DataGatherService extends DatabaseManagerService
 
         if (!isAllowedNetwork(network)) {
 
-            Bundle b = new Bundle();
-            b.putBoolean("", false);
-            b.putString("network", network);
-            resultReceiver.send(IS_ALLOWED_NETWORK, b);
+            sendMessageToActivity(IS_ALLOWED_NETWORK, false, network);
             return false;
         }
 
@@ -378,14 +329,19 @@ public class DataGatherService extends DatabaseManagerService
 
     }
 
-    /* get the date and time */
-    private String getTimeStamp(){
-        //getting current date and time using Date class
-        //DateFormat df = new DateFormat();
-        Date dateobj = new Date();
-        //return df.format(dateobj);
-        return null;
+    /** getTimeStamp
+     *      mountain standard time down to seconds
+     * @return
+     */
+    private static String getTimeStamp() {
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat(
+                    TIMESTAMP_FORMAT, Locale.US);
+        Date date = new Date();
+        return dateFormat.format(date);
+
     }
+
 
     /** isAllowedNetwork
      * 		tests to see if the network name is one of the allowed networks
@@ -404,7 +360,9 @@ public class DataGatherService extends DatabaseManagerService
     }
 
 
-    /**should be called when startbutton is clicked on mainActivity */
+    /**onStartBtnClicked
+     *      the result of the start button clicked
+     * */
     private void onStartBtnClicked() {
         /* get initial metadata and put in a hashmap */
         boolean putMetaDataSuccessful = false;
@@ -414,57 +372,68 @@ public class DataGatherService extends DatabaseManagerService
             workerThread.start();
 
             /* make the thread timeout after a certain time */
-            mCountDownTimer = new CountDownTimer(1000 * TIME_LIMIT, 1000) {
+            int tl = sharePrfs.prefs.getInt(sharePrfs.PREF_TIME_LIMIT, 10);
+            mCountDownTimer = new CountDownTimer(1000 * tl, 1000) {
+
                 @Override
                 public void onTick(long millisUntilFinished) {
                 }
 
                 @Override
                 public void onFinish() {
+                    sendMessageToActivity(TIMED_OUT, sharePrfs.getIsContinuous(), null);
                     workerThread.interrupt();
-                    Log.d(TAG, "countdown finished"); //$NON-NLS-1$
+                    Log.d(TAG, "countdown finished. "); //$NON-NLS-1$
 
-                    /* send back to UI the outcome of timer  */
-                    Bundle b = new Bundle();
-                    b.putBoolean("", isContinuous);
-                    resultReceiver.send(TIMED_OUT, b);
-//
-//                    if (!isContinuous) {
-//
-//                        Bundle b = new Bundle();
-//                        b.putStringArray("methods", new String[]{SpeedTestLauncher.FUNCTN_SHOW_POPUP});
-//                        b.putInt("mode", 1);
-//                        resultReceiver.send(SpeedTestLauncher.MSG_CALL_FUNCTION, b);
-//
-//
-//
-//                    } else {
-//                        Toast t = Toast.makeText(DataGatherService.this, "Test timed out.", Toast.LENGTH_SHORT);
-//                        t.show();
-//                    }
 
                 }
             };
             mCountDownTimer.start();
         }
 
-        /* send back to UI the outcome of putMetadata   */
-        Bundle b = new Bundle();
-        b.putBoolean("", putMetaDataSuccessful);
-        resultReceiver.send(PUT_META_DATA, b);
-
+        sendMessageToActivity(PUT_META_DATA, putMetaDataSuccessful, null);
 
     }
 
-    /* forward the message to the activity */
+    /** forwareMessageToActivity
+     *
+     * @param msg   the messsage to be copied and forwarded
+     * @param b the bundle to use, if null then it will create a new bundle
+     */
 
-    private void forwardMessageToActivity( Message msg, Bundle b ){
-        if ( b == null ) {
-            b = new Bundle();
+    private void forwardSpeedTestMessage(Message msg, Bundle b){
+        if (!(!sharePrfs.prefs.getBoolean(sharePrfs.PREF_ACTIVITY_RUNNING, false) && sharePrfs.getIsContinuous()) ) {
+            if (b == null) {
+                b = new Bundle();
+            }
+        /* cannot reuse messages */
+            Message newMessage = new Message();
+            newMessage.copyFrom(msg);
+
+            b.putParcelable(String.valueOf(RECEIVED_FROM_TESTER), newMessage);
+            resultReceiver.send(RECEIVED_FROM_TESTER, b);
+        } else {
+            Log.e(TAG, "suppressed message. activityRunning, isContinuous " +
+                    sharePrfs.getIsActivityRunning() + ", " + sharePrfs.getIsContinuous());
+
         }
+    }
 
-        b.putParcelable(String.valueOf(RECEIVED_FROM_TESTER), msg);
-        resultReceiver.send(RECEIVED_FROM_TESTER, b);
+    /** sendMessageToActivity
+     *      send a notification back to the activity. If the activity is stopped
+     * @param code the associated code
+     * @param bool the associated boolean
+     * @param s option string param
+     */
+    private void sendMessageToActivity(int code, boolean bool, String s) {
+        if (!(!sharePrfs.getIsActivityRunning() && sharePrfs.getIsContinuous())) {
+            Bundle b = new Bundle();
+            b.putBoolean("", bool);
+            b.putString("s", s);
+            resultReceiver.send(code, b);
+        } else {
+            Log.e(TAG, "suppressed message. activityRunning, isContinuous " +
+                    sharePrfs.getIsActivityRunning() + ", " + sharePrfs.getIsContinuous());        }
     }
 
 
@@ -477,45 +446,18 @@ public class DataGatherService extends DatabaseManagerService
                     final SpeedTester.SpeedInfo info1 = (SpeedTester.SpeedInfo) msg.obj;
 
                     /* send the message back to the activity for UI purposes */
-                    forwardMessageToActivity(msg, null);
-
-
-                    //mCustomProgressBar.setProgress(100 * msg.arg1);
-                    //callSpeedTestLauncherMethod("mCustomProgressBar.setProgress", "", 100 * msg.arg1);
-
-//                    float progress = 100 * msg.arg1;
-//                    Bundle b = new Bundle();
-//                    b.putStringArray("methods", new String[]{SpeedTestLauncher.SET_PROGRESS_BAR});
-//                    b.putFloat("param", progress);
-//                    resultReceiver.send(SpeedTestLauncher.MSG_CALL_FUNCTION, b);
-
+                    forwardSpeedTestMessage(msg, null);
 
                     break;
                 case MSG_UPDATE_CONNECTION_TIME:
                     //mTxtConnectionSpeed.setText(String.format(getResources().getString(R.string.update_connectionspeed), msg.arg1));
                     mConnectionTime = msg.arg1;
-                    forwardMessageToActivity(msg, null);
+                    forwardSpeedTestMessage(msg, null);
                     break;
                 case MSG_COMPLETE_STATUS:
 
-                    /* change the ui and play a sound */
-                    //changeUI(UI_MODE_NOT_TESTING);
-
-                    /* play a sound depending on whether complete or not */
-                    if (msg.arg2 == 1) {
-                        //playSound(SOUND_TEST_COMPLETE);
-                    } else if (msg.arg2 == 0) {
-                        //playSound(SOUND_ERROR);
-
-                    /* connection timeout error  do not continue */
-                    } else if (msg.arg2 == -1) {
-                        //playSound(SOUND_ERROR);
-                        //showPopup("", 3);
-
-                        //db.saveRecord(data);
-                        //data = null;
-                        break;
-                    }
+                    /* increment test count */
+                    sharePrfs.setTestCount( sharePrfs.getTestCount() + 1 );
 
 
                     final SpeedTester.SpeedInfo info2 = (SpeedTester.SpeedInfo) msg.obj;
@@ -524,39 +466,43 @@ public class DataGatherService extends DatabaseManagerService
 
 				/* download speed and total bytes downloaded */
                     data.put(FeedReaderDbHelper.SPEED_STRING, info2.megabits + "");
+                    data.put(FeedReaderDbHelper.SPEED_STRING_UNIT, getString(R.string.down_speed_unit));
+
                     data.put(FeedReaderDbHelper.BYTES_STRING, msg.arg1 + "");
 
 				/* connection time in ms */
                     data.put(FeedReaderDbHelper.CONNTIME_STRING, mConnectionTime + "");
-                    data.put(FeedReaderDbHelper.CONNTIMEUNIT_STRING, "ms");
-
-
-                    //Bundle toSend = new Bundle();
-                    ArrayList<String> methodsToCall = new ArrayList<>();
-
-				/* prepare data for user */
-                    //prepareData();
-
-
-                /* store data in db */
-                    db.saveRecord(data);
-                    String uuid = data.get(FeedReaderDbHelper.ID_STRING);
-                    //removeRecord(uuid);
-
-
-                    /* tell super service to transfer records */
-                    if( !mTransferInProgress ){
-                        transferRecords();
-                    }
+                    data.put(FeedReaderDbHelper.CONNTIMEUNIT_STRING, getString(R.string.conn_time_unit));
 
                     Bundle b = new Bundle();
                     b.putSerializable("data", data);
 
                     /* inform ui test is complete */
-                    forwardMessageToActivity(msg, b);
+                    forwardSpeedTestMessage(msg, b);
 
-                    /* keep testing even if activity in not bound */
-                    if ( activityStopped && isContinuous ) onStartBtnClicked();
+
+                /* store data in db */
+                    if ( data != null) {
+                        db.saveRecord(data);
+                        String uuid = data.get(FeedReaderDbHelper.ID_STRING);
+                        //removeRecord(uuid);
+                    } else {
+                        throw new IllegalStateException("Data hashmap is null. Did not save record");
+                    }
+
+
+
+
+                    /* keep testing even if activity in not bound and continuous mode is on
+                    *   if activity is bound, and continuous mode on, then the handler activity side
+                    *   will start the test again
+                    * */
+                    if ( !sharePrfs.prefs.getBoolean(sharePrfs.PREF_ACTIVITY_RUNNING, false) && sharePrfs.getIsContinuous() ) onStartBtnClicked();
+
+                    /* tell super service to transfer records */
+                    if( !mTransferInProgress ){
+                        transferRecords();
+                    }
 
 
 
@@ -567,13 +513,7 @@ public class DataGatherService extends DatabaseManagerService
         }
     };
 
-    /** startTestFromService
-     *      called when the service is starting its own test
-     *      (as opposed to the activity starting it like with a buttonclick)
-     */
-    private void startTestFromService(){
 
-    }
 
 
 

@@ -5,6 +5,7 @@ import android.util.Log;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.StatusLine;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
@@ -124,25 +125,34 @@ public class ServerRequestor {
 
         }
 
+
+
         /* attempt to read response */
         if ( response != null) {
+            StatusLine s = response.getStatusLine();
+            Log.d(TAG, "response status: " + s.toString());
+            Log.d(TAG, "response locale: " + response.getLocale());
+
             try {
                 HttpEntity responseEntity = response.getEntity();
                 Log.d(TAG, "content encoding: " + responseEntity.getContentEncoding());
                 //String contentEncoding = String.valueOf(responseEntity.getContentEncoding();
                 String contentEncoding = "UTF-8";
+
                 String responseString = EntityUtils.toString(responseEntity, contentEncoding);
                 Log.d(TAG, "response string: " + responseString);
 
                 /* cull out uuid */
-                responseString = responseString.substring(responseString.indexOf('{'), responseString.indexOf('}'));
+                int start, end;
+                if ( (start =  responseString.indexOf('{')) != -1 && (end =  responseString.indexOf('}'))!= -1) {
+                    responseString = responseString.substring(start, end);
+                }
                 /* format of response is {added:<uuid>}..<otherstuff>, and we just want the uuid */
                 if (responseString.contains("{added:")) {
                     responseString = responseString.replace("{added:", "");
                     responseString = responseString.replace("}", "");
                     responseString = responseString.trim();
-                }
-                else if (responseString.contains("{already have:")) {
+                } else if (responseString.contains("{already have:")) {
                     responseString = responseString.replace("{already have:", "");
                     responseString = responseString.replace("}", "");
                     responseString = responseString.trim();
@@ -151,13 +161,11 @@ public class ServerRequestor {
                 //interpretResponse( responseString, db );
                 return responseString;
 
-
             } catch (Exception e){
-                Log.e(TAG, "failed to decode response body: " + e.toString());
+                Log.e(TAG, "failed to decode response body: " + e.toString() + " response string: " );
 
             }
-            Log.d(TAG, "response status: " + response.getStatusLine().toString());
-            Log.d(TAG, "response locale: " + response.getLocale());
+
 
 
         } else {

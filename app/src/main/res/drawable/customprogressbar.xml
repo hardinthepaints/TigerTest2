@@ -31,7 +31,7 @@
 
     <item >
         <shape>
-            <stroke android:color="@color/fireLit"
+            <stroke android:color="#c2c2c2"
                 android:width="5dp"
                 />
 

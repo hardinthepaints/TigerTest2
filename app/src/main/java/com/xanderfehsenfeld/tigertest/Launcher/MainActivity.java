@@ -41,24 +41,18 @@ import java.util.LinkedList;
  */
 public class MainActivity extends SpeedTestLauncher {
 
-
-    /* connection timeout of speed tester */
-    private static int CONNECT_TIMEOUT = 0;
-
-
     /* vibrator */
     private Vibrator v;
 
     /* container of bottom scroller */
     protected LinearLayout mResultContainer;
 
-
-
     //private HorizontalScrollView mScroller;
     protected ScrollView mScroller;
 
 
     protected RelativeLayout mStartBtnContainer;
+
 
 
     public MainActivity(){
@@ -68,6 +62,10 @@ public class MainActivity extends SpeedTestLauncher {
 
     @Override
     public void onCreate(Bundle bundle) {
+
+        /* TODO remove after testing */
+        tests = new Tests(this);
+
         super.onCreate(bundle);
 
         mResultContainer = (LinearLayout) findViewById(R.id.resultContainer);
@@ -80,8 +78,14 @@ public class MainActivity extends SpeedTestLauncher {
 
         /* top scroll view */
         mTopScroller = (ScrollView) findViewById(R.id.topScrollView);
-        ViewGroup temp = (ViewGroup)(mTopScroller.getChildAt(0));
+        final ViewGroup temp = (ViewGroup)(mTopScroller.getChildAt(0));
         temp.setMinimumHeight(2 * screenDimens.y);
+        temp.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mTopScroller.fling(-5000);
+            }
+        });
         (temp.getChildAt(0)).setMinimumHeight(screenDimens.y);
 
 
@@ -103,14 +107,13 @@ public class MainActivity extends SpeedTestLauncher {
 
         /* make start button parent a certain size */
         //mBottomContainer.setMinimumHeight((int) (1.1 * ratioHeightBtnParent * screenDimens.y));
-        mResultContainer.setMinimumHeight((int) (1.5 * screenDimens.y));
+        mResultContainer.setMinimumHeight((int) (screenDimens.y));
 
         /* add spacers to scroll view */
         populateScrollView();
         // do extra stuff on your resources, using findViewById on your layout_for_activity1
 
-        /* TODO remove after testing */
-        tests = new Tests(this);
+
         //t.runTests();
 
 //        String toLog = "";
@@ -138,6 +141,8 @@ public class MainActivity extends SpeedTestLauncher {
         }
     }
 
+
+
     /**
      * Setup event handlers and bind variables to values from xml
      */
@@ -150,24 +155,15 @@ public class MainActivity extends SpeedTestLauncher {
 
                 /* fling scroller to top (toward start button */
                 //mTopScroller.fling(-2000);
-                mTopScroller.fullScroll(View.FOCUS_UP);
+                //mTopScroller.fullScroll(View.FOCUS_UP);
 
                 playSound(SOUND_CLICK_DOWN);
 
                 changeUI(UI_MODE_TESTING);
 
+
                 startTest(timeLimit, CONNECT_TIMEOUT, new Boolean(isContinuous));
 
-
-
-				/* get initial metadata and put in a hashmap */
-//                if (putMetaData()) {
-//
-//                    playSound(SOUND_TEST_STARTED);
-//
-//                }
-//
-//                else changeUI(UI_MODE_NOT_TESTING);
 
 
             }
@@ -200,6 +196,12 @@ public class MainActivity extends SpeedTestLauncher {
         pwindo.setOnDismissListener(myDismissListener);
         settingsPwindo.setOnDismissListener(myDismissListener);
 
+        /* when clicking on he back background around the start button, fling the scroller down */
+        mStartBtnContainer.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mTopScroller.fling(5000);}});
+
 
     }
 
@@ -226,12 +228,12 @@ public class MainActivity extends SpeedTestLauncher {
         /* set up seekbar */
         final TextView mTimeLimitTv = (TextView) mSettingsBody.findViewById(R.id.time_limit_tv);
         final SeekBar mTimeLimitSb = (SeekBar) mSettingsBody.findViewById(R.id.time_limit_seekbar);
-        mTimeLimitSb.setProgress(timeLimit);
+        mTimeLimitSb.setProgress(prefs.prefs.getInt(prefs.PREF_TIME_LIMIT, 30));
         mTimeLimitTv.setText("Test Time Limit: " + mTimeLimitSb.getProgress() + " seconds");
 
         final TextView mConnTimeOutTv = (TextView) mSettingsBody.findViewById(R.id.connect_timeout_tv);
         final SeekBar mConnTimeoutSb = (SeekBar) mSettingsBody.findViewById(R.id.connect_timeout_seekbar);
-        mConnTimeoutSb.setProgress((int) Math.sqrt(CONNECT_TIMEOUT));
+        mConnTimeoutSb.setProgress((int) Math.sqrt( prefs.prefs.getInt(prefs.PREF_CONNECT_TIME_LIMIT, 5)));
         mConnTimeOutTv.setText("Connection Timeout: " + mConnTimeoutSb.getProgress() * mConnTimeoutSb.getProgress() + "ms");
 
 
@@ -262,6 +264,10 @@ public class MainActivity extends SpeedTestLauncher {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                onSettingsChanged();
+                prefs.prefEditer.putInt(prefs.PREF_TIME_LIMIT, mTimeLimitSb.getProgress());
+                prefs.prefEditer.putInt(prefs.PREF_CONNECT_TIME_LIMIT, mConnTimeoutSb.getProgress());
+                prefs.prefEditer.commit();
             }
         };
         mTimeLimitSb.setOnSeekBarChangeListener(seekBarChangeListener);
@@ -281,8 +287,8 @@ public class MainActivity extends SpeedTestLauncher {
 
 
         final ToggleButton mSwitchBlockInternet = (ToggleButton) mSettingsBody.findViewById(R.id.switch_block_internet);
-        mSwitchBlockInternet.setChecked(Permissions.INTERNET_ACCESS);
-        mConnTimeoutSb.setEnabled(Permissions.INTERNET_ACCESS);
+        mSwitchBlockInternet.setChecked(prefs.prefs.getBoolean(prefs.PREF_INTERNET_ON, true));
+        mConnTimeoutSb.setEnabled(prefs.prefs.getBoolean(prefs.PREF_INTERNET_ON, true));
 
 
         /* create operate on checked changed listeners */
@@ -325,6 +331,10 @@ public class MainActivity extends SpeedTestLauncher {
                     }
                 }
                 t.show();
+                prefs.prefEditer.putBoolean(prefs.PREF_INTERNET_ON, mSwitchBlockInternet.isChecked());
+                prefs.prefEditer.putBoolean(prefs.PREF_IS_CONTINUOUS, mSwitchContinuous.isChecked());
+                prefs.prefEditer.commit();
+                onSettingsChanged();
             }
         };
         mSwitchBlockInternet.setOnCheckedChangeListener(myOnCheckChangedListener);
@@ -479,6 +489,10 @@ public class MainActivity extends SpeedTestLauncher {
         /* fade in and fade out animations */
         animFadeIn = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.fade_in);
         animFadeOut = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.fade_out);
+
+        TextView tv = ((TextView)findViewById(R.id.loader));
+        animSpin = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.spinning);
+
     }
 
     /* add empty textviews to use as spacers */
@@ -529,7 +543,7 @@ public class MainActivity extends SpeedTestLauncher {
                 float percent_scrolled = (float) mTopScroller.getScrollY() / (float) mTopScroller.getMaxScrollAmount();
                 int goalHeight = (int) ((float) screenDimens.y / 5f);
                 float multiplier = goalHeight - (screenDimens.y * ratioHeightSpacer);
-                int newminHeight = (int) ((screenDimens.y * ratioHeightSpacer) + (percent_scrolled * multiplier));
+                int newminHeight = (int) (((screenDimens.y * ratioHeightSpacer) / 2) + (percent_scrolled * multiplier));
 
                 /* scroll settings button in depending on location of start button */
                 mSettingsBtnScroller.scrollTo((int) (percent_scrolled * mSettingsBtnScroller.getMaxScrollAmount()), mSettingsBtnScroller.getScrollY());
@@ -556,15 +570,6 @@ public class MainActivity extends SpeedTestLauncher {
 
                     }
                 }
-
-
-
-
-                //int scrollY = mTopScroller.getScrollY(); //for verticalScrollView
-
-                //Log.d(TAG, "onScrollChanged: " + scrollY);
-                //DO SOMETHING WITH THE SCROLL COORDINATES
-
             }
         });
 
@@ -585,7 +590,6 @@ public class MainActivity extends SpeedTestLauncher {
         //rl.setGravity(Gravity.CENTER);
         rl.addView(toAdd);
         hs.addView(rl);
-
 
         /* set a minimum height */
         hs.setMinimumHeight((int) (ratioHeightSpacer * screenDimens.y));
@@ -624,7 +628,6 @@ public class MainActivity extends SpeedTestLauncher {
         //label.setAlpha(0);
         return label;
     }
-
 
 
 }

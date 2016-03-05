@@ -5,6 +5,8 @@
         android:layout_height="match_parent"
         android:id="@+id/setting_layout_container"
         android:layout_margin="@dimen/abc_action_bar_stacked_max_height"
+        android:clickable="true"
+        android:onClick="dissMissAllPopups"
         android:background="@drawable/settings_popup_background"
         >
 
@@ -19,6 +21,7 @@
         android:background="@drawable/settings_popup_background"
         android:layout_centerHorizontal="true"
         android:onClick="dissMissAllPopups"
+        android:clickable="true"
         />
 
         <ScrollView
@@ -42,8 +45,12 @@
                     android:textColor="@color/textColorPrimary"
                     android:text="records in db"
                     android:layout_margin="10dp"
-                    android:gravity="center"/>
+                    android:gravity="center"
+                    android:onClick="dissMissAllPopups"
+                    android:clickable="true"
+                    />
                 <ToggleButton
+                    android:visibility="visible"
                     android:layout_margin="10dp"
                     android:layout_height="50dp"
                     android:textOn="Test Mode: Continuous"
@@ -52,6 +59,7 @@
                     android:layout_width="match_parent"
                      />
                 <ToggleButton
+                    android:visibility="gone"
                     android:layout_margin="10dp"
                     android:layout_height="50dp"
                     android:textOn="Internet:On"

@@ -15,8 +15,9 @@ import android.os.Messenger;
 import android.os.ResultReceiver;
 import android.util.Log;
 
-import com.xanderfehsenfeld.tigertest.Launcher.SpeedTestLauncher;
+import com.xanderfehsenfeld.tigertest.Launcher.MySharedPrefsWrapper;
 import com.xanderfehsenfeld.tigertest.Launcher.Tests;
+import com.xanderfehsenfeld.tigertest.R;
 import com.xanderfehsenfeld.tigertest.ServerRequestor;
 
 import java.io.IOException;
@@ -34,8 +35,6 @@ public class DatabaseManagerService extends Service
     //protected final Messenger mServerMessenger = new Messenger(new IncomingHandler(this));
     protected Messenger mServerMessenger;
 
-
-    public static final int MSG_RECOGNIZER_START_LISTENING = 1;
     public static final int MSG_RECORD_ADDED = 2;
 
 
@@ -51,15 +50,18 @@ public class DatabaseManagerService extends Service
     /* db with wrapper class */
     protected MyDbWrapper db;
     private boolean mTransferInProgress = false;
+    private String SERVER_URL;
+
+    /* shared prefs */
+    public MySharedPrefsWrapper sharePrfs;
 
 
     @Override
     public void onCreate()
     {
+        SERVER_URL = getResources().getString(R.string.server_url);
 
         Log.d(TAG, "onCreate"); //$NON-NLS-1$
-
-
 
     }
 
@@ -76,43 +78,6 @@ public class DatabaseManagerService extends Service
 
     }
 
-    /* IncomingHandler now declared in DataGatherService.class */
-
-//    /* IncomingHandler */
-//    protected class IncomingHandler extends Handler
-//    {
-//        private WeakReference<DatabaseManagerService> mtarget;
-//
-//        IncomingHandler(DatabaseManagerService target)
-//        {
-//            mtarget = new WeakReference<DatabaseManagerService>(target);
-//            Log.d(TAG, "IncomingHandler");
-//        }
-//
-//
-//        @Override
-//        public void handleMessage(Message msg)
-//        {
-//            final DatabaseManagerService target = mtarget.get();
-//
-//            switch (msg.what)
-//            {
-//                case MSG_RECOGNIZER_START_LISTENING:
-//
-//                    Log.d(TAG, "message start listening");
-//                    break;
-//
-//                case MSG_RECORD_ADDED:
-//
-//                    Log.d(TAG, "message record added"); //$NON-NLS-1$
-//
-//                    if( !mTransferInProgress ){
-//                        transferRecords();
-//                    }
-//                    break;
-//            }
-//        }
-//    }
 
     /** transferRecords
      *      transfer all the records to the server
@@ -121,25 +86,30 @@ public class DatabaseManagerService extends Service
     public void transferRecords(){
         mTransferInProgress = true;
 
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if ( db.getRecordCount() > 0 ) {
+                    for ( String id : db.getIds()) {
+                        HashMap<String,String> record = db.retrieveRecord(id);
 
-        if ( db.getRecordCount() > 0 ) {
-            for ( String id : db.getIds()) {
-                HashMap<String,String> record = db.retrieveRecord(id);
+                        AsyncTask task = new PostToServerTask().execute(record);
+                        try {
+                            task.get(30, TimeUnit.SECONDS);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        } catch (ExecutionException e) {
+                            e.printStackTrace();
+                        } catch (TimeoutException e) {
+                            e.printStackTrace();
+                        }
 
-                    AsyncTask task = new PostToServerTask().execute(record);
-                    try {
-                        task.get(30, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    } catch (TimeoutException e) {
-                        e.printStackTrace();
                     }
 
+                }
             }
+        }).run();
 
-        }
         mTransferInProgress = false;
 
     }
@@ -177,13 +147,6 @@ public class DatabaseManagerService extends Service
 
         /* TODO remove after testing */
         mTestResultReceiver = intent.getParcelableExtra(Tests.TEST_RECEIVER_STRING);
-
-        db = intent.getParcelableExtra("db");
-        if ( db != null ) {
-            Log.d(TAG, "recieved db not null");
-        } else{
-            Log.e(TAG, "recieved db is null");
-        }
 
 
         FeedReaderDbHelper mDbHelper = new FeedReaderDbHelper(getApplicationContext());
@@ -226,7 +189,7 @@ public class DatabaseManagerService extends Service
         protected String doInBackground(HashMap<String,String> ... records) {
             String result = "no result";
             try {
-                result = ServerRequestor.post(SpeedTestLauncher.SERVER_URL, records[0]);
+                result = ServerRequestor.post(SERVER_URL, records[0]);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -236,7 +199,11 @@ public class DatabaseManagerService extends Service
         @Override
         protected void onPostExecute(String result) {
 
-            sendResults(db.retrieveRecord(result), interpretResponse(result));
+            HashMap<String, String> record = db.retrieveRecord(result);
+            if (record != null) sendResults(db.retrieveRecord(result), interpretResponse(result));
+            else {
+                Log.e(TAG, "onPostExecute record is null");
+            }
 
         }
     }

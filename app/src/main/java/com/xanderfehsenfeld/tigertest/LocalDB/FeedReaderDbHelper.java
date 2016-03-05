@@ -36,7 +36,10 @@ public class FeedReaderDbHelper extends SQLiteOpenHelper {
         public static final String ACCESSPT_STRING = "wirelessAccessPointMAC";
         public static final String LOCATIONPROV_STRING = "locationProvider";
         public static final String ID_STRING = "uuid";
-    public static final String GEOCODE_STRING = "geocode";
+        public static final String GEOCODE_STRING = "geocode";
+    public static final String TEST_COUNT = "testCount";
+    public static final String SPEED_STRING_UNIT = "downSpeedUnit";
+
 
 
     static final String TABLE_NAME = "appresults";
@@ -46,6 +49,7 @@ public class FeedReaderDbHelper extends SQLiteOpenHelper {
     static String TYPE_INT = "INTEGER";
 
 
+    /* hashmap must have the above constants */
     public static HashMap<String,String> types = new HashMap<String, String>(){
         {
             put(NETWORK_STRING, TYPE_TEXT);
@@ -63,6 +67,8 @@ public class FeedReaderDbHelper extends SQLiteOpenHelper {
             put(ACCESSPT_STRING, TYPE_TEXT);
             put(LOCATIONPROV_STRING, TYPE_TEXT);
             put(GEOCODE_STRING, TYPE_TEXT);
+            put(SPEED_STRING_UNIT, TYPE_TEXT);
+            put(TEST_COUNT, TYPE_INT);
             put(ID_STRING, TYPE_TEXT + " PRIMARY KEY");
 
         }};
