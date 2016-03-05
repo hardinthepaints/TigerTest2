@@ -142,22 +142,6 @@ public class ServerRequestor {
                 String responseString = EntityUtils.toString(responseEntity, contentEncoding);
                 Log.d(TAG, "response string: " + responseString);
 
-                /* cull out uuid */
-                int start, end;
-                if ( (start =  responseString.indexOf('{')) != -1 && (end =  responseString.indexOf('}'))!= -1) {
-                    responseString = responseString.substring(start, end);
-                }
-                /* format of response is {added:<uuid>}..<otherstuff>, and we just want the uuid */
-                if (responseString.contains("{added:")) {
-                    responseString = responseString.replace("{added:", "");
-                    responseString = responseString.replace("}", "");
-                    responseString = responseString.trim();
-                } else if (responseString.contains("{already have:")) {
-                    responseString = responseString.replace("{already have:", "");
-                    responseString = responseString.replace("}", "");
-                    responseString = responseString.trim();
-                }
-
                 //interpretResponse( responseString, db );
                 return responseString;
 

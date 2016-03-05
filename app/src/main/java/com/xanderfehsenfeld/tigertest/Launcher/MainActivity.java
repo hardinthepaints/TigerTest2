@@ -44,8 +44,7 @@ public class MainActivity extends SpeedTestLauncher {
     /* vibrator */
     private Vibrator v;
 
-    /* container of bottom scroller */
-    protected LinearLayout mResultContainer;
+
 
     //private HorizontalScrollView mScroller;
     protected ScrollView mScroller;
@@ -439,14 +438,15 @@ public class MainActivity extends SpeedTestLauncher {
 
         /* data structures to keep track of text and color */
         //textAnim = new LinkedList();
-        scrollersToAnimate = new LinkedList<>();
+        viewsToAnimate = new LinkedList<>();
         //textAndColor = new HashMap<>();
 
         v = (Vibrator) MainActivity.this.getSystemService(Context.VIBRATOR_SERVICE);
 
-        scrollerFlyIn = new ScaleAnimation(0, 1, 0, 1, Animation.RELATIVE_TO_PARENT, .5f, Animation.ABSOLUTE, -1000);
-        scrollerFlyIn.setDuration(300);
-        scrollerFlyIn.setAnimationListener(new Animation.AnimationListener() {
+        flyInFromLeft = new ScaleAnimation(0, 1, 0, 1, Animation.RELATIVE_TO_PARENT, .5f, Animation.ABSOLUTE, -1000);
+        flyInFromLeft.setDuration(300);
+        Animation.AnimationListener repeater;
+        flyInFromLeft.setAnimationListener( repeater = new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
 
@@ -458,19 +458,19 @@ public class MainActivity extends SpeedTestLauncher {
                 /* vibrate for 250 ms */
                 v.vibrate(250);
 
-                if (!scrollersToAnimate.isEmpty()) {
+                if (!viewsToAnimate.isEmpty()) {
 
-                    HorizontalScrollView last = scrollersToAnimate.pop();
+                    View last = viewsToAnimate.pop();
+                    last.clearAnimation();
 
 
-                    if (!scrollersToAnimate.isEmpty()) {
-                        HorizontalScrollView next = scrollersToAnimate.peekFirst();
-                        //next.startAnimation(scrollerFlyIn);
+                    if (!viewsToAnimate.isEmpty()) {
+                        View next = viewsToAnimate.peekFirst();
+                        //next.startAnimation(flyInFromLeft);
                         runOnUiThread(new UpdateUI(next));
                     }
 
                     last.setVisibility(View.VISIBLE);
-                    mScroller.fling(300);
                 }
 
 
@@ -482,12 +482,15 @@ public class MainActivity extends SpeedTestLauncher {
             }
         });
 
+
+
 		/* load a flyin animation to animate text views */
         animationFlyIn = new ScaleAnimation(0, 1, 0, 1, Animation.RELATIVE_TO_PARENT, .5f, Animation.ABSOLUTE, -1000);
         animationFlyIn.setDuration(300);
 
         /* fade in and fade out animations */
         animFadeIn = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.fade_in);
+        animFadeIn.setAnimationListener(repeater);
         animFadeOut = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.fade_out);
 
         TextView tv = ((TextView)findViewById(R.id.loader));
@@ -504,28 +507,26 @@ public class MainActivity extends SpeedTestLauncher {
         ping_scroller = getNewItem("<ping_scroller>", getResources().getColor(R.color.PingTextColor));
         downspeed_scroller = getNewItem("<downspeed_scroller>", getResources().getColor(R.color.downSpeedTextColor));
 
+
+        tv_network = (TextView)findViewById(R.id.tv_network);
+        tv_ping = (TextView)findViewById(R.id.tv_ping);
+        tv_downspeed = (TextView)findViewById(R.id.tv_downspeed);
+
+
         /* labels */
-        final TextView label_network = getLabel("<network>");
-        final TextView label_speed = getLabel("<downspeed (megabits per sec)");
-        final TextView label_ping = getLabel("<connection latency (ms)>");
+        final TextView label_network = (TextView)findViewById(R.id.tv_network_label);
+        final TextView label_speed = (TextView)findViewById(R.id.tv_downspeed_label);
+        final TextView label_ping = (TextView)findViewById(R.id.tv_ping_label);
+        for ( int i = 0 ; i < mResultContainer.getChildCount(); i ++){
+            mResultContainer.getChildAt(i).setVisibility(View.INVISIBLE);
+        }
 
-        /* by default should be invisible */
-        network_scroller.setVisibility(View.INVISIBLE);
-        ping_scroller.setVisibility(View.INVISIBLE);
-        downspeed_scroller.setVisibility(View.INVISIBLE);
-
-        /* order they will appear */
-        mResultContainer.addView(label_network);
-        mResultContainer.addView(network_scroller);
-        mResultContainer.addView(label_ping);
-        mResultContainer.addView(ping_scroller);
-        mResultContainer.addView(label_speed);
-        mResultContainer.addView(downspeed_scroller);
 
         //mTopScroller.setSmoothScrollingEnabled(true);
         mSettingsBtnScroller = (HorizontalScrollView)findViewById(R.id.btn_settings_scroller);
 
-        mTopScroller.getViewTreeObserver().addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
+        ViewTreeObserver.OnScrollChangedListener listener;
+        mTopScroller.getViewTreeObserver().addOnScrollChangedListener(listener = new ViewTreeObserver.OnScrollChangedListener() {
 
             int lastScrollY = mTopScroller.getScrollY();
 
@@ -548,10 +549,10 @@ public class MainActivity extends SpeedTestLauncher {
                 /* scroll settings button in depending on location of start button */
                 mSettingsBtnScroller.scrollTo((int) (percent_scrolled * mSettingsBtnScroller.getMaxScrollAmount()), mSettingsBtnScroller.getScrollY());
 
+                for (int i = 0; i < mResultContainer.getChildCount(); i ++){
+                    mResultContainer.getChildAt(i).setMinimumHeight(newminHeight);
+                }
 
-                downspeed_scroller.setMinimumHeight(newminHeight);
-                network_scroller.setMinimumHeight(newminHeight);
-                ping_scroller.setMinimumHeight(newminHeight);
 
                 ArrayList<View> labels = new ArrayList<View>(){{
                     add(label_network);
@@ -562,16 +563,17 @@ public class MainActivity extends SpeedTestLauncher {
                 float visibility_threshold = (float) .9;
                 for ( View v : labels) {
                     if (percent_scrolled > visibility_threshold && (v.getVisibility() == View.INVISIBLE)){
-                        v.setVisibility(View.VISIBLE);
-                        v.startAnimation(animFadeIn);
+                        //v.setVisibility(View.VISIBLE);
+                        //v.startAnimation(animFadeIn);
                     } else if (percent_scrolled < visibility_threshold && (v.getVisibility() == View.VISIBLE)){
-                        v.setVisibility(View.INVISIBLE);
-                        v.startAnimation(animFadeOut);
+                        //v.setVisibility(View.INVISIBLE);
+                        //v.startAnimation(animFadeOut);
 
                     }
                 }
             }
         });
+        listener.onScrollChanged();
 
 
     }

@@ -97,9 +97,9 @@ public class SpeedTestLauncher extends Activity {
     /* animations */
     protected Animation animationFlyIn;
     public Animation animSpin;
-    protected Animation scrollerFlyIn;
+    protected Animation flyInFromLeft;
     //protected LinkedList<String> textAnim;
-    protected LinkedList<HorizontalScrollView> scrollersToAnimate;
+    protected LinkedList<View> viewsToAnimate;
 
     //Private fields
     public static final String TAG = SpeedTestLauncher.class.getSimpleName();
@@ -125,6 +125,10 @@ public class SpeedTestLauncher extends Activity {
     protected HorizontalScrollView ping_scroller;
     protected HorizontalScrollView mSettingsBtnScroller;
 
+    public TextView tv_downspeed;
+    public TextView tv_ping;
+    public TextView tv_network;
+
     /* progress bar */
     ProgressBar mCustomProgressBar;
 
@@ -147,6 +151,9 @@ public class SpeedTestLauncher extends Activity {
 
     /* preferences */
     MySharedPrefsWrapper prefs;
+
+    /* container of bottom scroller */
+    public LinearLayout mResultContainer;
 
     /* A service connection to connect this Activity with the speech recognition service */
     public final ServiceConnection mServiceConnection = new ServiceConnection()
@@ -267,7 +274,7 @@ public class SpeedTestLauncher extends Activity {
         (findViewById(R.id.btn_settings_scroller)).setMinimumWidth(screenDimens.x * 2);
         (findViewById(R.id.btn_settings_container)).setMinimumWidth(screenDimens.x * 2);
         mBtnSettings = (Button)findViewById(R.id.btn_settings);
-        mBtnSettings.setLayoutParams(new LinearLayout.LayoutParams(screenDimens.x / 5, screenDimens.x / 5));
+        mBtnSettings.setLayoutParams(new LinearLayout.LayoutParams(screenDimens.x / 4, screenDimens.x / 4));
 
 
         /* get a database helper */
@@ -655,7 +662,7 @@ public class SpeedTestLauncher extends Activity {
     protected void changeUI(int mode){
         if (mode == UI_MODE_TESTING){
             setProgressBarVisibility(true);
-            mCustomProgressBar.startAnimation(animFadeIn);
+            //mCustomProgressBar.startAnimation(animFadeIn);
             mCustomProgressBar.setVisibility(View.VISIBLE);
             mResultViewer.setText("");
 
@@ -663,24 +670,24 @@ public class SpeedTestLauncher extends Activity {
             //int maxIndex = mResultContainer.getChildCount()-1;
             //int removeCount = Math.max(mResultContainer.getChildCount() - 6, 0);
             //mResultContainer.removeViews(maxIndex - removeCount + 1, removeCount);
-            downspeed_scroller.setVisibility(View.INVISIBLE);
-            ping_scroller.setVisibility(View.INVISIBLE);
-            network_scroller.setVisibility(View.INVISIBLE);
+//            downspeed_scroller.setVisibility(View.INVISIBLE);
+//            ping_scroller.setVisibility(View.INVISIBLE);
+//            network_scroller.setVisibility(View.INVISIBLE);
 
             /* disable slider during test */
             ((SeekBar)settingsPwindo.getContentView().findViewById(R.id.time_limit_seekbar)).setEnabled(false);
 
             mBtnStart.setEnabled(false);
             mBtnStart.setText("TESTING...");
-            mBtnStart.setBackground(getResources().getDrawable(R.drawable.circular_button_pressed));
+            mBtnStart.setBackground(getResources().getDrawable(R.drawable.start_btn_pressed_layer));
 
             loader.startAnimation( animSpin );
 
         } else if ( mode == UI_MODE_NOT_TESTING){
-            mCustomProgressBar.startAnimation(animFadeOut);
+            //mCustomProgressBar.startAnimation(animFadeOut);
             mCustomProgressBar.setVisibility(View.INVISIBLE);
             mBtnStart.setEnabled(true);
-            mBtnStart.setBackground(getResources().getDrawable(R.drawable.circular_button_background));
+            mBtnStart.setBackground(getResources().getDrawable(R.drawable.start_btn_background));
             mBtnStart.setText("START TEST");
             setProgressBarVisibility(false);
 
@@ -700,26 +707,25 @@ public class SpeedTestLauncher extends Activity {
 
         // download speed
         String z = data.get(FeedReaderDbHelper.SPEED_STRING);
-        if ( z.contains(".")) z = z.substring(0, z.indexOf(".")+2);
-        TextView tv;
-        tv = ((TextView)((RelativeLayout) downspeed_scroller.getChildAt(0)).getChildAt(0));
-        tv.setText(z);
-        adjustTextView(tv);
-        scrollersToAnimate.add(downspeed_scroller);
-
+        int start;
+        if ((start = z.indexOf('.')) != -1){
+            z = z.substring(0, start + 5);
+        }
+        tv_downspeed.setText(z);
+        adjustTextView(tv_downspeed);
 
         z = data.get(FeedReaderDbHelper.CONNTIME_STRING);
-        tv = ((TextView)((RelativeLayout) ping_scroller.getChildAt(0)).getChildAt(0));
-        tv.setText(z);
-        adjustTextView(tv);
-        scrollersToAnimate.add(ping_scroller);
+        tv_ping.setText(z);
+        adjustTextView(tv_ping);
 
         //network name
         z = data.get(FeedReaderDbHelper.NETWORK_STRING);
-        tv = ((TextView)((RelativeLayout) network_scroller.getChildAt(0)).getChildAt(0));
-        tv.setText(z);
-        adjustTextView(tv);
-        scrollersToAnimate.add(network_scroller);
+        tv_network.setText(z);
+        adjustTextView(tv_network);
+
+        for ( int i = 0 ; i < mResultContainer.getChildCount(); i ++){
+            viewsToAnimate.add( mResultContainer.getChildAt(i) );
+        }
 
 
     }
@@ -735,8 +741,8 @@ public class SpeedTestLauncher extends Activity {
      */
 	void startRainAnimation(){
 
-        if (!scrollersToAnimate.isEmpty()){
-            HorizontalScrollView first = scrollersToAnimate.peekFirst();
+        if (!viewsToAnimate.isEmpty()){
+            View first = viewsToAnimate.peekFirst();
             runOnUiThread(new UpdateUI(first));
         }
     }
@@ -757,15 +763,16 @@ public class SpeedTestLauncher extends Activity {
      */
     class UpdateUI implements Runnable
     {
-        HorizontalScrollView horizontalScrollView;
+        View v;
 
-        public UpdateUI(HorizontalScrollView horizontalScrollView) {
+        public UpdateUI(View v) {
 
-            this.horizontalScrollView = horizontalScrollView;
+            this.v = v;
         }
         public void run() {
 
-            horizontalScrollView.startAnimation(scrollerFlyIn);
+            //v.startAnimation(flyInFromLeft);
+            v.startAnimation(animFadeIn);
         }
     }
 

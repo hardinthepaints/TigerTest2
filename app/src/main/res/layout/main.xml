@@ -23,6 +23,90 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center|bottom">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_gravity="center_vertical"
+                    >
+                    <TextView
+                        android:paddingRight="10dp"
+                        android:layout_gravity="center_vertical"
+                        android:textAlignment="gravity"
+                        android:gravity="right"
+                        android:text="Current Network:"
+                        android:textColor="@color/bloodRed"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/tv_network_label"
+                        android:layout_weight="1"/>
+                    <TextView
+                        android:paddingLeft="10dp"
+                        android:layout_gravity="center_vertical"
+                        android:textColor="@color/networkTextColor"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/tv_network"
+                        android:layout_weight="1"/>
+
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_gravity="center_vertical"
+                    >
+                    <TextView
+                        android:paddingRight="10dp"
+                        android:text="ping (milliseconds):"
+                        android:layout_gravity="center_vertical"
+                        android:textAlignment="gravity"
+                        android:gravity="right"
+                        android:textColor="@color/bloodRed"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/tv_ping_label"
+                        android:layout_weight="1"/>
+                    <TextView
+                        android:paddingLeft="10dp"
+                        android:layout_gravity="center_vertical"
+
+                        android:textColor="@color/PingTextColor"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/tv_ping"
+                        android:layout_weight="1"/>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_gravity="center_vertical"
+
+                    >
+                    <TextView
+                        android:paddingRight="10dp"
+                        android:layout_gravity="center_vertical"
+                        android:textAlignment="gravity"
+                        android:gravity="right"
+                        android:text="speed (megabits per second):"
+                        android:textColor="@color/bloodRed"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/tv_downspeed_label"
+                        android:layout_weight="1"/>
+                    <TextView
+                        android:paddingLeft="10dp"
+                        android:layout_gravity="center_vertical"
+                        android:textColor="@color/downSpeedTextColor"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/tv_downspeed"
+                        android:layout_weight="1"/>
+
+                </LinearLayout>
                 <TextView
                     android:visibility="invisible"
                     android:id="@+id/resultviewer"
@@ -75,7 +159,7 @@
                         android:id="@+id/btnStart"
                         android:text="@string/start_button"
                         android:textColor="@color/PingTextColor"
-                        android:background="@drawable/circular_button_background"
+                        android:background="@drawable/start_btn_background"
                         />
 
                 </RelativeLayout>
@@ -144,10 +228,10 @@
             >
             <Button
                 android:id ="@+id/btn_settings"
-                android:background="@drawable/circular_button_background"
+                android:background="@drawable/settings_btn_background"
                 android:layout_width="100dp"
                 android:layout_height="100dp"
-                android:text="Settings"
+                android:text=""
                 android:layout_gravity="left|center_vertical"
                 android:textColor="@color/PingTextColor"
                 />

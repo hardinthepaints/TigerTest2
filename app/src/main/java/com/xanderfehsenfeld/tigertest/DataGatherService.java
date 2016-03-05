@@ -20,6 +20,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.PowerManager;
 import android.util.Log;
 
 import com.xanderfehsenfeld.tigertest.GPS.GPSTracker;
@@ -51,7 +52,6 @@ public class DataGatherService extends DatabaseManagerService
     public static final int MSG_SETTINGS_CHANGE = -10;
     public static final String TIMESTAMP_FORMAT = "yyyy-MM-dd HH:mm:ss";
     public static final int MSG_SENT_SHARED_PREFS = -11;
-    public String DOWNLOAD_FILE_URL = "http://www.smdc.army.mil/smdcphoto_gallery/Missiles/IFT_13B_Launch/IFT13b-3-02.jpg";
 
     private static final String TAG = "DataGatherService";
 
@@ -76,9 +76,8 @@ public class DataGatherService extends DatabaseManagerService
     public CountDownTimer mCountDownTimer;
     private boolean isContinuous = false;
     private int mConnectionTime;
-    //public int TIME_LIMIT = 5;
-    //public int CONNECT_TIMEOUT = 0;
     private boolean activityStopped = true;
+    private PowerManager.WakeLock mWakeLock;
 
 
     @Override
@@ -93,6 +92,8 @@ public class DataGatherService extends DatabaseManagerService
 
         initDataSources();
 
+        PowerManager powerManager = (PowerManager) getApplicationContext().getSystemService(Context.POWER_SERVICE);
+        mWakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SpeedTest");
 
     }
 
@@ -364,6 +365,12 @@ public class DataGatherService extends DatabaseManagerService
      *      the result of the start button clicked
      * */
     private void onStartBtnClicked() {
+        if ( !sharePrfs.getIsActivityRunning() && !mWakeLock.isHeld() ) {
+            mWakeLock.acquire();
+            Log.i(TAG, "wakelock acquired");
+        }
+
+
         /* get initial metadata and put in a hashmap */
         boolean putMetaDataSuccessful = false;
         if (putMetaDataSuccessful = putMetaData()) {
@@ -497,7 +504,12 @@ public class DataGatherService extends DatabaseManagerService
                     *   if activity is bound, and continuous mode on, then the handler activity side
                     *   will start the test again
                     * */
-                    if ( !sharePrfs.prefs.getBoolean(sharePrfs.PREF_ACTIVITY_RUNNING, false) && sharePrfs.getIsContinuous() ) onStartBtnClicked();
+                    if ( !sharePrfs.prefs.getBoolean(sharePrfs.PREF_ACTIVITY_RUNNING, false) && sharePrfs.getIsContinuous() ) {
+                        onStartBtnClicked();
+                    } else if (mWakeLock.isHeld()){
+                        mWakeLock.release();
+                        Log.i(TAG, "wakelock released");
+                    }
 
                     /* tell super service to transfer records */
                     if( !mTransferInProgress ){

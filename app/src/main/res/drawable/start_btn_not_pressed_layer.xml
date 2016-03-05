@@ -1,0 +1,12 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+
+    <item android:id="@android:id/progress"
+        android:drawable="@drawable/circular_button_notpressed">
+
+    </item>
+    <item android:id="@android:id/background"
+        android:drawable="@drawable/start_btn_not_pressed">
+    </item>
+
+</layer-list> 

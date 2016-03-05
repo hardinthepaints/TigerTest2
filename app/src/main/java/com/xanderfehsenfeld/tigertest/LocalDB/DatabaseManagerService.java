@@ -29,7 +29,8 @@ import java.util.concurrent.TimeoutException;
 public class DatabaseManagerService extends Service
 {
     private static final String TAG = "DatabaseManagerService";
-    private static final String LOCATION_SERVICES_TAG = "DatabaseManagerService";
+    public String DOWNLOAD_FILE_URL = "http://www.smdc.army.mil/smdcphoto_gallery/Missiles/IFT_13B_Launch/IFT13b-3-02.jpg";
+
 
 
     //protected final Messenger mServerMessenger = new Messenger(new IncomingHandler(this));
@@ -115,15 +116,53 @@ public class DatabaseManagerService extends Service
     }
 
     /** interpretResponse
-     *      if the server returns a uuid, this function will remove that record from the db
+     *     attempts to interpret the server's response
      * @param response the response string
      */
     private boolean interpretResponse(String response){
-        if (db.retrieveRecord(response) != null) {
-            db.removeRecord(response);
-            return true;
+        Log.d(TAG, "interpretResponse: " + response);
+        boolean successful = false;
+
+                        /* cull out uuid */
+
+        int start, end;
+        String temp = null;
+
+        if ( (start =  response.indexOf('{')) != -1 && (end =  response.indexOf('}'))!= -1) {
+            String uuid = response.substring(start, end);
+
+
+                /* format of response is {added:<uuid>}..<otherstuff>, and we just want the uuid */
+            if (uuid.contains("{added:")) {
+                temp = uuid.replace("{added:", "");
+                temp = temp.replace("}", "");
+                temp = temp.trim();
+            } else if (uuid.contains("{already have:")) {
+                temp = uuid.replace("{already have:", "");
+                temp = temp.replace("}", "");
+                temp = temp.trim();
+            }
+            HashMap<String, String> record = null;
+            if (temp != null && (record = db.retrieveRecord(temp)) != null) {
+                db.removeRecord(temp);
+                sendResults(record, true);
+                successful = true;
+            }
         }
-        return false;
+        /* cull out download url */
+        if ( (start =  response.indexOf('[')) != -1 && (end =  response.indexOf(']'))!= -1) {
+            String newUrl = response.substring(start, end);
+            if (newUrl.contains("[fileDownloaded:")) {
+                newUrl = newUrl.replace("[fileDownloaded:", "");
+                newUrl = newUrl.replace("]", "");
+                newUrl = newUrl.trim();
+                Log.i(TAG, "interpretResponse. culled out url: " + newUrl);
+                DOWNLOAD_FILE_URL = newUrl;
+
+
+            }
+        }
+        return successful;
     }
 
     @Override
@@ -199,11 +238,7 @@ public class DatabaseManagerService extends Service
         @Override
         protected void onPostExecute(String result) {
 
-            HashMap<String, String> record = db.retrieveRecord(result);
-            if (record != null) sendResults(db.retrieveRecord(result), interpretResponse(result));
-            else {
-                Log.e(TAG, "onPostExecute record is null");
-            }
+            boolean isSuccess = interpretResponse(result);
 
         }
     }
