@@ -7,7 +7,7 @@
 
     <color name="borderPrimary">#8f00fc</color>
     <color name="backgroundPrimary">#ff4651</color>
-    <color name="backgroundDark">#ee7b7b7b</color>
+    <color name="backgroundDark">#ee000000</color>
 
     <color name="greyOver">#5b065300</color>
 
@@ -17,7 +17,8 @@
     <color name="PingTextColor">#9bc4c2</color>
     <color name="transParent">#c2c2c2</color>
     <color name="deepGreen">#178900</color>
-    <color name="fireLit">#ff9100</color>
+    <color name="fireLit">#ffa938</color>
     <color name="bloodRed">#ff0400</color>
     <color name="blueIvory">#c2c2c2</color>
+    <color name="primaryBackground">#7b7b7b</color>
 </resources>

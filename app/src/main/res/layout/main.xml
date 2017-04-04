@@ -3,6 +3,7 @@
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:background="@color/primaryBackground"
     >
 
     <RelativeLayout
@@ -107,6 +108,35 @@
                         android:layout_weight="1"/>
 
                 </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_gravity="center_vertical"
+
+                    >
+                    <TextView
+                        android:paddingRight="10dp"
+                        android:layout_gravity="center_vertical"
+                        android:textAlignment="gravity"
+                        android:gravity="right"
+                        android:text="test #"
+                        android:textColor="@color/bloodRed"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/tv_test_number_label"
+                        android:layout_weight="1"/>
+                    <TextView
+                        android:paddingLeft="10dp"
+                        android:layout_gravity="center_vertical"
+                        android:textColor="@color/fireLit"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/tv_test_number"
+                        android:layout_weight="1"/>
+
+                </LinearLayout>
                 <TextView
                     android:visibility="invisible"
                     android:id="@+id/resultviewer"
@@ -138,7 +168,6 @@
                     android:id="@+id/topContainerA"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:background="@drawable/gradient_black_to_clear"
                     >
 
                     <TextView
@@ -146,7 +175,7 @@
                         android:id="@+id/loader"
                         android:layout_width="100dp"
                         android:layout_height="100dp"
-                        android:background="@drawable/loadinganim"
+                        android:background="@drawable/gear_background"
                         android:layout_centerInParent="true"/>
 
                     <Button
@@ -157,7 +186,7 @@
                         android:textSize="30dp"
                         android:maxLines="1"
                         android:id="@+id/btnStart"
-                        android:text="@string/start_button"
+                        android:text=""
                         android:textColor="@color/PingTextColor"
                         android:background="@drawable/start_btn_background"
                         />
@@ -235,6 +264,13 @@
                 android:layout_gravity="left|center_vertical"
                 android:textColor="@color/PingTextColor"
                 />
+            <ToggleButton
+                android:id="@+id/toggle_infinity"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:background="@drawable/infinity_btn_background"
+                android:textOn=""
+                android:textOff=""/>
 
 
 
@@ -251,7 +287,6 @@
             android:background="@color/greyOver">
 
         </RelativeLayout>
-
 
 
     </RelativeLayout>

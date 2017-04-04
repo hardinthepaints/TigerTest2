@@ -8,10 +8,9 @@
         android:clickable="true"
         android:onClick="dissMissAllPopups"
         android:background="@drawable/settings_popup_background"
-        >
+    >
 
     <TextView
-        android:id="@+id/settings_header"
         android:textColor="@color/PingTextColor"
         android:gravity="center"
         android:textSize="@dimen/abc_text_size_large_material"
@@ -23,7 +22,18 @@
         android:onClick="dissMissAllPopups"
         android:clickable="true"
         />
-
+    <TextView
+        android:id="@+id/settings_header"
+        android:textColor="@color/PingTextColor"
+        android:gravity="center"
+        android:textSize="@dimen/abc_text_size_large_material"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="Settings"
+        android:layout_centerHorizontal="true"
+        android:onClick="dissMissAllPopups"
+        android:clickable="true"
+        />
         <ScrollView
             android:layout_below="@id/settings_header"
             android:layout_width="match_parent"
@@ -48,6 +58,7 @@
                     android:gravity="center"
                     android:onClick="dissMissAllPopups"
                     android:clickable="true"
+                    android:background="@color/primaryBackground"
                     />
                 <ToggleButton
                     android:visibility="visible"
@@ -73,7 +84,7 @@
                     android:layout_height="50dp">
                     <SeekBar
                         android:id="@+id/time_limit_seekbar"
-                        android:max="100"
+                        android:max="1000"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent" />
                     <TextView
