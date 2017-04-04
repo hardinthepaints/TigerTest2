@@ -14,7 +14,7 @@ import java.net.URLConnection;
 
 /**
  * An internet speed test which downloads a file and measures how long it takes,
- * sendin out periodic messages to SpeedTestLauncher
+ * sending out periodic messages to SpeedTestLauncher
  *
  * Once the tester has started, it either stops when the file is downloaded,
  * or when its thread is interrupted
